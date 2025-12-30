@@ -27,7 +27,7 @@ export default function AuthModal() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -37,13 +37,17 @@ export default function AuthModal() {
           },
         })
         if (error) throw error
-        setMessage('Check your email to confirm your account!')
+        // Auto-login: if session exists, user is logged in immediately
+        if (data.session) {
+          setShowAuthModal(false)
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         if (error) throw error
+        setShowAuthModal(false)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
