@@ -13,7 +13,7 @@ import PartnerSection from './PartnerSection'
 import ThemeToggle from './ThemeToggle'
 
 export default function HabitTracker() {
-  const { user, profile, setShowAuthModal, signOut } = useAuth()
+  const { user, profile, loading: authLoading, setShowAuthModal, signOut } = useAuth()
   const [habits, setHabits] = useState<HabitWithEntries[]>([])
   const [loading, setLoading] = useState(true)
   const [quarter, setQuarter] = useState<Quarter>(getCurrentQuarter())
@@ -290,7 +290,7 @@ export default function HabitTracker() {
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         {/* User Profile Section */}
-        {user && profile && (
+        {!authLoading && user && profile && (
           <div className="mb-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-700)] flex items-center justify-center text-2xl text-white font-medium ring-2 ring-[var(--accent-500)]">
@@ -322,7 +322,28 @@ export default function HabitTracker() {
         </div>
 
         {/* Habits List */}
-        {!user ? (
+        {authLoading ? (
+          // Auth loading state - checking session
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-[var(--card-bg)] rounded-xl p-5 animate-pulse border border-[var(--card-border)]">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="h-5 w-32 bg-[var(--card-border)] rounded mb-2" />
+                    <div className="h-3 w-48 bg-[var(--card-border)] rounded opacity-50" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="grid grid-cols-7 gap-1">
+                    {[...Array(28)].map((_, j) => (
+                      <div key={j} className="w-3 h-3 bg-[var(--card-border)] rounded-sm opacity-50" />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !user ? (
           // Not logged in - Welcome state
           <div className="text-center py-20">
             <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">

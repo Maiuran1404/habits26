@@ -22,13 +22,11 @@ const colorOptions = [
   '#34d399', // sea green
 ]
 
-const frequencyPresets = [
-  { value: 7, label: 'Daily' },
-  { value: 5, label: '5x/week' },
-  { value: 3, label: '3x/week' },
-  { value: 2, label: '2x/week' },
-  { value: 1, label: '1x/week' },
-]
+const getFrequencyLabel = (value: number): string => {
+  if (value === 7) return 'Daily'
+  if (value === 1) return '1x per week'
+  return `${value}x per week`
+}
 
 export default function HabitModal({
   isOpen,
@@ -159,21 +157,35 @@ export default function HabitModal({
             <label className="block text-sm font-medium text-[var(--muted)] mb-2">
               Weekly Target
             </label>
-            <div className="flex gap-2 flex-wrap">
-              {frequencyPresets.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  onClick={() => setTargetPerWeek(preset.value)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    targetPerWeek === preset.value
-                      ? 'bg-[var(--accent-600)] text-white'
-                      : 'bg-[var(--card-border)] text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-hover-border)]'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-semibold text-[var(--foreground)]">
+                  {getFrequencyLabel(targetPerWeek)}
+                </span>
+                <span className="text-sm text-[var(--muted)]">
+                  {targetPerWeek}/7 days
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="7"
+                value={targetPerWeek}
+                onChange={(e) => setTargetPerWeek(parseInt(e.target.value))}
+                className="w-full h-2 bg-[var(--card-border)] rounded-lg appearance-none cursor-pointer accent-[var(--accent-500)]"
+                style={{
+                  background: `linear-gradient(to right, var(--accent-500) 0%, var(--accent-500) ${((targetPerWeek - 1) / 6) * 100}%, var(--card-border) ${((targetPerWeek - 1) / 6) * 100}%, var(--card-border) 100%)`
+                }}
+              />
+              <div className="flex justify-between text-xs text-[var(--muted-light)]">
+                <span>1x</span>
+                <span>2x</span>
+                <span>3x</span>
+                <span>4x</span>
+                <span>5x</span>
+                <span>6x</span>
+                <span>7x</span>
+              </div>
             </div>
           </div>
 
