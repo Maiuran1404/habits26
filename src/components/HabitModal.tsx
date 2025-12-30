@@ -1,0 +1,148 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { X } from 'lucide-react'
+import { Habit } from '@/types/database'
+
+interface HabitModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onSave: (habit: { name: string; description: string; color: string }) => Promise<void>
+  habit?: Habit | null
+}
+
+const colorOptions = [
+  '#22c55e', // green
+  '#f97316', // orange
+  '#3b82f6', // blue
+  '#a855f7', // purple
+  '#ec4899', // pink
+  '#eab308', // yellow
+  '#14b8a6', // teal
+  '#f43f5e', // rose
+]
+
+export default function HabitModal({
+  isOpen,
+  onClose,
+  onSave,
+  habit,
+}: HabitModalProps) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [color, setColor] = useState(colorOptions[0])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (habit) {
+      setName(habit.name)
+      setDescription(habit.description || '')
+      setColor(habit.color)
+    } else {
+      setName('')
+      setDescription('')
+      setColor(colorOptions[0])
+    }
+  }, [habit, isOpen])
+
+  if (!isOpen) return null
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+
+    setLoading(true)
+    try {
+      await onSave({ name: name.trim(), description: description.trim(), color })
+      onClose()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-zinc-900 rounded-2xl p-6 w-full max-w-md mx-4 border border-zinc-800 shadow-2xl">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+        >
+          <X size={20} />
+        </button>
+
+        <h2 className="text-xl font-bold text-white mb-6">
+          {habit ? 'Edit Habit' : 'Create New Habit'}
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+              Habit Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Morning Exercise"
+              required
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 px-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+              Description (optional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What does this habit involve?"
+              rows={3}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 px-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Color
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {colorOptions.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-8 h-8 rounded-full transition-transform ${
+                    color === c ? 'ring-2 ring-white scale-110' : 'hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2.5 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !name.trim()}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white font-medium py-2.5 rounded-lg transition-colors"
+            >
+              {loading ? 'Saving...' : habit ? 'Save Changes' : 'Create Habit'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
