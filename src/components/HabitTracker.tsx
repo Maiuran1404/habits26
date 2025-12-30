@@ -11,6 +11,7 @@ import HabitModal from './HabitModal'
 import QuarterSelector from './QuarterSelector'
 import PartnerSection from './PartnerSection'
 import ThemeToggle from './ThemeToggle'
+import GoalsSection from './GoalsSection'
 
 export default function HabitTracker() {
   const { user, profile, loading: authLoading, setShowAuthModal, signOut } = useAuth()
@@ -399,6 +400,9 @@ export default function HabitTracker() {
             )}
           </div>
         )}
+
+        {/* Goals Section */}
+        {user && <GoalsSection />}
 
         {/* User Profile Section */}
         {!authLoading && user && profile && (

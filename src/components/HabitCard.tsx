@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Trash2, Edit2, Check, X, Circle } from 'lucide-react'
 import { HabitWithEntries, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
-import { format, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns'
+import { format, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, subDays, parseISO } from 'date-fns'
 
 interface HabitCardProps {
   habit: HabitWithEntries
@@ -27,6 +27,40 @@ export default function HabitCard({
   onDelete,
   readonly = false,
 }: HabitCardProps) {
+  // Calculate streak (consecutive days ending today or yesterday)
+  const streak = useMemo(() => {
+    const today = new Date()
+    const todayStr = format(today, 'yyyy-MM-dd')
+    const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd')
+
+    // Sort entries by date descending
+    const sortedDoneEntries = habit.entries
+      .filter((e) => e.status === 'done')
+      .map((e) => e.date)
+      .sort((a, b) => b.localeCompare(a))
+
+    if (sortedDoneEntries.length === 0) return 0
+
+    // Check if streak is active (completed today or yesterday)
+    const lastDate = sortedDoneEntries[0]
+    if (lastDate !== todayStr && lastDate !== yesterdayStr) return 0
+
+    let count = 1
+    let currentDate = parseISO(lastDate)
+
+    for (let i = 1; i < sortedDoneEntries.length; i++) {
+      const expectedPrev = format(subDays(currentDate, 1), 'yyyy-MM-dd')
+      if (sortedDoneEntries[i] === expectedPrev) {
+        count++
+        currentDate = parseISO(sortedDoneEntries[i])
+      } else {
+        break
+      }
+    }
+
+    return count
+  }, [habit.entries])
+
   const stats = useMemo(() => {
     const { start, end } = getQuarterDates(year, quarter)
     const today = new Date()
@@ -56,26 +90,6 @@ export default function HabitCard({
     }
   }, [habit.entries, quarter, year])
 
-  // Weekly stats calculation
-  const weeklyStats = useMemo(() => {
-    const today = new Date()
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 }) // Monday
-    const weekEnd = endOfWeek(today, { weekStartsOn: 1 }) // Sunday
-
-    const completedThisWeek = habit.entries.filter(
-      (e) => e.status === 'done' &&
-             isWithinInterval(new Date(e.date), { start: weekStart, end: weekEnd })
-    ).length
-
-    const target = habit.target_per_week || 7
-
-    return {
-      completed: completedThisWeek,
-      target,
-      isDaily: target === 7,
-    }
-  }, [habit.entries, habit.target_per_week])
-
   // Today's entry status
   const todayEntry = useMemo(() => {
     const todayStr = format(new Date(), 'yyyy-MM-dd')
@@ -84,30 +98,60 @@ export default function HabitCard({
 
   return (
     <div className="bg-[var(--card-bg)] backdrop-blur rounded-xl p-4 sm:p-5 border border-[var(--card-border)] hover:border-[var(--card-hover-border)] transition-colors">
+      {/* Header: Name + Large Checkbox */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[var(--foreground)] text-lg truncate">{habit.name}</h3>
-          {habit.description && (
-            <p className="text-[var(--muted)] text-sm mt-1 line-clamp-2">{habit.description}</p>
-          )}
-        </div>
+        <h3 className="font-semibold text-[var(--foreground)] text-lg truncate flex-1">
+          {habit.name}
+        </h3>
 
+        {/* Large Today Checkbox - Top Right */}
         {!readonly && (
-          <div className="flex items-center gap-1 ml-2">
-            <button
-              onClick={() => onEdit?.(habit)}
-              className="p-1.5 text-[var(--muted-light)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
+          <button
+            onClick={() => onTodayClick?.(habit.id)}
+            className="flex-shrink-0 ml-3"
+            title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today as done'}
+          >
+            <div
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                todayEntry?.status === 'done'
+                  ? 'shadow-md'
+                  : todayEntry?.status === 'missed'
+                  ? 'bg-red-500/20 border border-red-500/30'
+                  : 'bg-[var(--card-border)]/50 hover:bg-[var(--card-border)] border border-[var(--card-border)]'
+              }`}
+              style={{
+                backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
+              }}
             >
-              <Edit2 size={16} />
-            </button>
-            <button
-              onClick={() => onDelete?.(habit.id)}
-              className="p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
+              {todayEntry?.status === 'done' ? (
+                <Check size={18} className="text-white" />
+              ) : todayEntry?.status === 'missed' ? (
+                <X size={16} className="text-red-400" />
+              ) : (
+                <Check size={16} className="text-[var(--muted-light)]" />
+              )}
+            </div>
+          </button>
         )}
+      </div>
+
+      {/* Stats Badges Row */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[var(--card-border)]/50 text-[var(--muted)]">
+          Streak: {streak}
+        </span>
+        <span
+          className="px-2 py-0.5 text-xs font-medium rounded-md"
+          style={{
+            backgroundColor: `${habit.color}20`,
+            color: habit.color
+          }}
+        >
+          {stats.percentage}%
+        </span>
+        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[var(--card-border)]/50 text-[var(--muted)]">
+          {stats.completed} check-ins
+        </span>
       </div>
 
       {/* Calendar Grid */}
@@ -122,65 +166,25 @@ export default function HabitCard({
         />
       </div>
 
-      {/* Stats and Today Button Row */}
-      <div className="flex items-center justify-between pt-3 border-t border-[var(--card-border)]/50">
-        <div className="flex items-center gap-4">
-          {/* Main Stats */}
-          <div className="text-center">
-            <div
-              className="text-2xl font-bold"
-              style={{ color: habit.color }}
-            >
-              {stats.percentage}%
-            </div>
-            <div className="text-xs text-[var(--muted-light)]">
-              {stats.completed}/{stats.total} days
-            </div>
-          </div>
-
-          {/* Weekly Stats */}
-          {!weeklyStats.isDaily && (
-            <div className="text-center pl-4 border-l border-[var(--card-border)]/50">
-              <div className="text-lg font-semibold text-[var(--foreground)]">
-                {weeklyStats.completed}/{weeklyStats.target}
-              </div>
-              <div className="text-xs text-[var(--muted-light)]">
-                this week
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Mark Today Button */}
-        {!readonly && (
+      {/* Edit/Delete Buttons - Bottom */}
+      {!readonly && (
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--card-border)]/50">
           <button
-            onClick={() => onTodayClick?.(habit.id)}
-            className="flex-shrink-0"
-            title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today'}
+            onClick={() => onEdit?.(habit)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors border border-[var(--card-border)]"
           >
-            <div
-              className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                todayEntry?.status === 'done'
-                  ? 'shadow-lg'
-                  : todayEntry?.status === 'missed'
-                  ? 'bg-red-500/20'
-                  : 'bg-[var(--card-border)] hover:bg-[var(--card-hover-border)]'
-              }`}
-              style={{
-                backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
-              }}
-            >
-              {todayEntry?.status === 'done' ? (
-                <Check size={24} className="text-white" />
-              ) : todayEntry?.status === 'missed' ? (
-                <X size={24} className="text-red-400" />
-              ) : (
-                <Circle size={24} className="text-[var(--muted-light)]" />
-              )}
-            </div>
+            <Edit2 size={14} />
+            Edit
           </button>
-        )}
-      </div>
+          <button
+            onClick={() => onDelete?.(habit.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors border border-red-500/30"
+          >
+            <Trash2 size={14} />
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   )
 }

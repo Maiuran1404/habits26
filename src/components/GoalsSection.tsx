@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Plus, X, Circle, CheckCircle2 } from 'lucide-react'
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns'
+import { format, startOfWeek, endOfWeek } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Goal, GoalType } from '@/types/database'
@@ -26,12 +26,6 @@ export default function GoalsSection() {
     const today = new Date()
     const weekStart = startOfWeek(today, { weekStartsOn: 1 })
     const weekEnd = endOfWeek(today, { weekStartsOn: 1 })
-    const monthStart = startOfMonth(today)
-    const monthEnd = endOfMonth(today)
-    const quarterStart = startOfQuarter(today)
-    const quarterEnd = endOfQuarter(today)
-    const yearStart = startOfYear(today)
-    const yearEnd = endOfYear(today)
 
     const getQuarterLabel = () => {
       const month = today.getMonth()
@@ -41,19 +35,9 @@ export default function GoalsSection() {
 
     return [
       {
-        type: 'daily' as GoalType,
-        title: 'Today',
-        subtitle: format(today, 'MMMM d, yyyy'),
-      },
-      {
         type: 'weekly' as GoalType,
         title: 'Week',
         subtitle: `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`,
-      },
-      {
-        type: 'monthly' as GoalType,
-        title: 'Month',
-        subtitle: format(today, 'MMMM yyyy'),
       },
       {
         type: 'quarterly' as GoalType,
@@ -179,13 +163,13 @@ export default function GoalsSection() {
 
   return (
     <div className="mb-6">
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-thin">
+      <div className="grid grid-cols-3 gap-3">
         {columns.map((column) => {
           const columnGoals = getGoalsByType(column.type)
           return (
             <div
               key={column.type}
-              className="flex-shrink-0 w-44 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden"
+              className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden"
             >
               {/* Column Header */}
               <div className="px-3 py-2 border-b border-[var(--card-border)]">

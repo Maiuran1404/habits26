@@ -13,7 +13,7 @@ interface HabitGridProps {
   readonly?: boolean
 }
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export default function HabitGrid({
@@ -49,8 +49,8 @@ export default function HabitGrid({
       const weeks: (Date | null)[][] = []
       let currentWeek: (Date | null)[] = []
 
-      // Pad the start of the first week
-      const firstDayOfWeek = getDay(monthStart)
+      // Pad the start of the first week (Monday = 0, Sunday = 6)
+      const firstDayOfWeek = (getDay(monthStart) + 6) % 7
       for (let i = 0; i < firstDayOfWeek; i++) {
         currentWeek.push(null)
       }

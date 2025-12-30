@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Users, UserPlus, X, Check, Heart, Mail, Loader2 } from 'lucide-react'
+import { Users, UserPlus, X, Check, Loader2, UserMinus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Profile, HabitWithEntries, Quarter, Partnership, getQuarterDates } from '@/types/database'
@@ -49,13 +49,11 @@ function calculatePartnerProgress(habits: HabitWithEntries[], year: number, quar
 export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   const { user } = useAuth()
   const [partners, setPartners] = useState<PartnerData[]>([])
-  const [pendingRequests, setPendingRequests] = useState<Partnership[]>([])
-  const [showInviteModal, setShowInviteModal] = useState(false)
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteLoading, setInviteLoading] = useState(false)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviteSuccess, setInviteSuccess] = useState(false)
+  const [allUsers, setAllUsers] = useState<Profile[]>([])
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set())
+  const [showAddModal, setShowAddModal] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [addingUserId, setAddingUserId] = useState<string | null>(null)
 
   const supabase = useMemo(() => createClient(), [])
   const userId = user?.id
@@ -63,20 +61,21 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   const fetchPartners = useCallback(async () => {
     if (!userId) {
       setPartners([])
+      setFriendIds(new Set())
       setLoading(false)
       return
     }
 
     setLoading(true)
 
-    // Timeout safety net (5 seconds)
     const timeout = setTimeout(() => {
-      console.warn('Partners fetch timed out - check if database tables exist')
+      console.warn('Partners fetch timed out')
       setPartners([])
       setLoading(false)
     }, 5000)
 
     try {
+      // Get all partnerships (accepted)
       const { data: partnerships, error: partnershipError } = await supabase
         .from('partnerships')
         .select('*')
@@ -94,6 +93,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       if (!partnerships || partnerships.length === 0) {
         clearTimeout(timeout)
         setPartners([])
+        setFriendIds(new Set())
         setLoading(false)
         return
       }
@@ -101,6 +101,8 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       const partnerIds = partnerships.map((p: Partnership) =>
         p.user_id === userId ? p.partner_id : p.user_id
       )
+
+      setFriendIds(new Set(partnerIds))
 
       const { data: profiles } = await supabase
         .from('profiles')
@@ -138,126 +140,98 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
     }
   }, [userId, supabase])
 
-  const fetchPendingRequests = useCallback(async () => {
+  const fetchAllUsers = useCallback(async () => {
     if (!userId) {
-      setPendingRequests([])
+      setAllUsers([])
       return
     }
 
     try {
       const { data, error } = await supabase
-        .from('partnerships')
+        .from('profiles')
         .select('*')
-        .eq('partner_id', userId)
-        .eq('status', 'pending')
+        .neq('id', userId)
+        .order('display_name', { ascending: true })
 
       if (error) {
-        console.error('Error fetching pending requests:', error)
-        setPendingRequests([])
+        console.error('Error fetching users:', error)
+        setAllUsers([])
       } else {
-        setPendingRequests(data || [])
+        setAllUsers(data || [])
       }
     } catch (err) {
-      console.error('Error fetching pending requests:', err)
-      setPendingRequests([])
+      console.error('Error fetching users:', err)
+      setAllUsers([])
     }
   }, [userId, supabase])
 
   useEffect(() => {
     if (userId) {
       fetchPartners()
-      fetchPendingRequests()
+      fetchAllUsers()
     } else {
       setPartners([])
-      setPendingRequests([])
+      setAllUsers([])
       setLoading(false)
     }
-  }, [userId, quarter, year, fetchPartners, fetchPendingRequests])
+  }, [userId, quarter, year, fetchPartners, fetchAllUsers])
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user || !inviteEmail.trim()) return
+  const handleAddFriend = async (partnerId: string) => {
+    if (!userId) return
 
-    setInviteLoading(true)
-    setInviteError(null)
-    setInviteSuccess(false)
+    setAddingUserId(partnerId)
 
     try {
-      const { data: foundUsers, error: findError } = await supabase
-        .rpc('find_user_by_email', { search_email: inviteEmail.trim() })
-
-      if (findError) throw findError
-      if (!foundUsers || foundUsers.length === 0) {
-        setInviteError('No user found with that email. They need to sign up first.')
-        setInviteLoading(false)
-        return
-      }
-
-      const partnerId = foundUsers[0].id
-
-      if (partnerId === user.id) {
-        setInviteError("You can't add yourself as a partner")
-        setInviteLoading(false)
-        return
-      }
-
+      // Check if partnership already exists
       const { data: existing } = await supabase
         .from('partnerships')
         .select('*')
-        .or(`and(user_id.eq.${user.id},partner_id.eq.${partnerId}),and(user_id.eq.${partnerId},partner_id.eq.${user.id})`)
+        .or(`and(user_id.eq.${userId},partner_id.eq.${partnerId}),and(user_id.eq.${partnerId},partner_id.eq.${userId})`)
         .single()
 
       if (existing) {
-        setInviteError('Partnership already exists with this user')
-        setInviteLoading(false)
-        return
+        // Update to accepted if it exists
+        await supabase
+          .from('partnerships')
+          .update({ status: 'accepted' })
+          .eq('id', existing.id)
+      } else {
+        // Create new partnership with status accepted (instant add)
+        await supabase
+          .from('partnerships')
+          .insert({
+            user_id: userId,
+            partner_id: partnerId,
+            status: 'accepted',
+          })
       }
 
-      const { error: insertError } = await supabase
-        .from('partnerships')
-        .insert({
-          user_id: user.id,
-          partner_id: partnerId,
-          status: 'pending',
-        })
-
-      if (insertError) throw insertError
-
-      setInviteSuccess(true)
-      setInviteEmail('')
-      setTimeout(() => {
-        setShowInviteModal(false)
-        setInviteSuccess(false)
-      }, 1500)
+      // Refresh the partners list
+      await fetchPartners()
     } catch (error) {
-      setInviteError(error instanceof Error ? error.message : 'Failed to send invite')
+      console.error('Error adding friend:', error)
     } finally {
-      setInviteLoading(false)
+      setAddingUserId(null)
     }
   }
 
-  const handleAcceptRequest = async (partnershipId: string) => {
-    const { error } = await supabase
-      .from('partnerships')
-      .update({ status: 'accepted' })
-      .eq('id', partnershipId)
+  const handleRemoveFriend = async (partnershipId: string) => {
+    try {
+      await supabase
+        .from('partnerships')
+        .delete()
+        .eq('id', partnershipId)
 
-    if (!error) {
-      fetchPendingRequests()
-      fetchPartners()
+      await fetchPartners()
+    } catch (error) {
+      console.error('Error removing friend:', error)
     }
   }
 
-  const handleRejectRequest = async (partnershipId: string) => {
-    const { error } = await supabase
-      .from('partnerships')
-      .update({ status: 'rejected' })
-      .eq('id', partnershipId)
-
-    if (!error) {
-      fetchPendingRequests()
-    }
-  }
+  // Filter users who are not already friends
+  const availableUsers = useMemo(() => {
+    return allUsers.filter(u => !friendIds.has(u.id))
+  }, [allUsers, friendIds])
 
   if (!user) return null
 
@@ -277,28 +251,13 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
           )}
         </div>
         <button
-          onClick={() => setShowInviteModal(true)}
+          onClick={() => setShowAddModal(true)}
           className="flex items-center gap-1.5 text-sm text-[var(--accent-text)] hover:text-[var(--accent-text-light)] transition-colors bg-[var(--accent-bg)] hover:bg-[var(--accent-bg-hover)] px-3 py-1.5 rounded-lg border border-[var(--accent-border)]"
         >
           <UserPlus size={14} />
           Add Friend
         </button>
       </div>
-
-      {/* Pending Requests */}
-      {pendingRequests.length > 0 && (
-        <div className="mb-6 space-y-2">
-          <p className="text-xs text-[var(--muted-light)] uppercase tracking-wider mb-2">Friend Requests</p>
-          {pendingRequests.map((request) => (
-            <PendingRequestCard
-              key={request.id}
-              request={request}
-              onAccept={() => handleAcceptRequest(request.id)}
-              onReject={() => handleRejectRequest(request.id)}
-            />
-          ))}
-        </div>
-      )}
 
       {/* Friends Content */}
       {loading ? (
@@ -328,7 +287,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
             Add friends to see their habit progress alongside yours. Stay motivated and accountable together.
           </p>
           <button
-            onClick={() => setShowInviteModal(true)}
+            onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-2 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-5 py-2.5 rounded-xl transition-all hover:scale-105 shadow-lg shadow-green-500/20"
           >
             <UserPlus size={16} />
@@ -344,21 +303,22 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
               partner={partner}
               quarter={quarter}
               year={year}
+              onRemove={() => handleRemoveFriend(partner.partnership.id)}
             />
           ))}
         </div>
       )}
 
-      {/* Invite Modal */}
-      {showInviteModal && (
+      {/* Add Friend Modal - Shows All Users */}
+      {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => !inviteLoading && setShowInviteModal(false)}
+            onClick={() => setShowAddModal(false)}
           />
-          <div className="relative bg-[var(--card-bg)] rounded-2xl p-6 w-full max-w-md mx-4 border border-[var(--card-border)] shadow-2xl backdrop-blur">
+          <div className="relative bg-[var(--card-bg)] rounded-2xl p-6 w-full max-w-md mx-4 border border-[var(--card-border)] shadow-2xl backdrop-blur max-h-[80vh] flex flex-col">
             <button
-              onClick={() => !inviteLoading && setShowInviteModal(false)}
+              onClick={() => setShowAddModal(false)}
               className="absolute top-4 right-4 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
             >
               <X size={20} />
@@ -368,66 +328,75 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
               <UserPlus className="text-[var(--accent-text)]" size={22} />
             </div>
 
-            <h2 className="text-xl font-bold text-[var(--foreground)] text-center mb-1">Add a Friend</h2>
+            <h2 className="text-xl font-bold text-[var(--foreground)] text-center mb-1">Add Friends</h2>
             <p className="text-[var(--muted)] text-sm text-center mb-6">
-              They&apos;ll receive a request to connect
+              Click on any user to add them as a friend
             </p>
 
-            {inviteSuccess ? (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--accent-bg)] flex items-center justify-center">
-                  <Check className="text-[var(--accent-text)]" size={24} />
+            {/* Users List */}
+            <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+              {availableUsers.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="mx-auto text-[var(--muted-light)] mb-3" size={32} />
+                  <p className="text-[var(--muted)]">
+                    {allUsers.length === 0
+                      ? 'No other users yet'
+                      : 'You\'re already friends with everyone!'}
+                  </p>
                 </div>
-                <p className="text-[var(--accent-text)] font-medium">Request Sent!</p>
-              </div>
-            ) : (
-              <>
-                {inviteError && (
-                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                    {inviteError}
-                  </div>
-                )}
-
-                <form onSubmit={handleInvite} className="space-y-4">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="friend@example.com"
-                      required
-                      disabled={inviteLoading}
-                      className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors disabled:opacity-50"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setShowInviteModal(false)}
-                      disabled={inviteLoading}
-                      className="flex-1 bg-[var(--card-border)] hover:bg-[var(--card-hover-border)] disabled:opacity-50 text-[var(--foreground)] font-medium py-2.5 rounded-lg transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={inviteLoading || !inviteEmail.trim()}
-                      className="flex-1 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2"
-                    >
-                      {inviteLoading ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          Sending...
-                        </>
+              ) : (
+                availableUsers.map((profile) => (
+                  <button
+                    key={profile.id}
+                    onClick={() => handleAddFriend(profile.id)}
+                    disabled={addingUserId === profile.id}
+                    className="w-full flex items-center justify-between p-3 bg-[var(--background)] hover:bg-[var(--accent-bg)] border border-[var(--card-border)] hover:border-[var(--accent-border)] rounded-xl transition-all disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)] flex items-center justify-center text-white font-medium">
+                        {profile.display_name?.[0]?.toUpperCase() || profile.email[0].toUpperCase()}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-[var(--foreground)]">
+                          {profile.display_name || profile.email.split('@')[0]}
+                        </div>
+                        <div className="text-xs text-[var(--muted-light)]">
+                          {profile.email}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {addingUserId === profile.id ? (
+                        <Loader2 size={18} className="animate-spin text-[var(--accent-text)]" />
                       ) : (
-                        'Send Request'
+                        <UserPlus size={18} className="text-[var(--accent-text)]" />
                       )}
-                    </button>
-                  </div>
-                </form>
-              </>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {/* Current Friends in Modal */}
+            {partners.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-[var(--card-border)]">
+                <p className="text-xs text-[var(--muted-light)] uppercase tracking-wider mb-2">
+                  Current Friends ({partners.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {partners.map((partner) => (
+                    <div
+                      key={partner.partnership.id}
+                      className="flex items-center gap-2 px-2 py-1 bg-[var(--accent-bg)] rounded-lg text-sm"
+                    >
+                      <span className="text-[var(--foreground)]">
+                        {partner.profile.display_name || partner.profile.email.split('@')[0]}
+                      </span>
+                      <Check size={14} className="text-[var(--accent-text)]" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -441,10 +410,12 @@ function FriendHabitsSection({
   partner,
   quarter,
   year,
+  onRemove,
 }: {
   partner: PartnerData
   quarter: Quarter
   year: number
+  onRemove: () => void
 }) {
   const progress = useMemo(
     () => calculatePartnerProgress(partner.habits, year, quarter),
@@ -472,17 +443,28 @@ function FriendHabitsSection({
           </div>
         </div>
 
-        {/* Progress indicator */}
-        {partner.habits.length > 0 && (
-          <div className="text-right">
-            <div className="text-lg font-bold text-[var(--accent-text)]">
-              {progress}%
+        <div className="flex items-center gap-3">
+          {/* Progress indicator */}
+          {partner.habits.length > 0 && (
+            <div className="text-right">
+              <div className="text-lg font-bold text-[var(--accent-text)]">
+                {progress}%
+              </div>
+              <div className="text-xs text-[var(--muted-light)]">
+                this sprint
+              </div>
             </div>
-            <div className="text-xs text-[var(--muted-light)]">
-              this sprint
-            </div>
-          </div>
-        )}
+          )}
+
+          {/* Remove friend button */}
+          <button
+            onClick={onRemove}
+            className="p-2 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            title="Remove friend"
+          >
+            <UserMinus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Friend's Habits */}
@@ -509,83 +491,6 @@ function FriendHabitsSection({
             ))}
           </div>
         )}
-      </div>
-    </div>
-  )
-}
-
-/* Pending Request Card */
-function PendingRequestCard({
-  request,
-  onAccept,
-  onReject,
-}: {
-  request: Partnership
-  onAccept: () => void
-  onReject: () => void
-}) {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const supabase = useMemo(() => createClient(), [])
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', request.user_id)
-        .single()
-
-      if (data) setProfile(data as Profile)
-      setLoading(false)
-    }
-    fetchProfile()
-  }, [request.user_id, supabase])
-
-  if (loading) {
-    return (
-      <div className="bg-[var(--card-bg)] border border-[var(--accent-border)] rounded-xl p-4 animate-pulse">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-[var(--card-border)]" />
-          <div>
-            <div className="h-4 w-24 bg-[var(--card-border)] rounded mb-1" />
-            <div className="h-3 w-16 bg-[var(--card-border)] rounded opacity-50" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!profile) return null
-
-  return (
-    <div className="bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-xl p-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)] flex items-center justify-center text-white font-medium">
-          {profile.display_name?.[0]?.toUpperCase() || profile.email[0].toUpperCase()}
-        </div>
-        <div>
-          <div className="font-medium text-[var(--foreground)]">
-            {profile.display_name || profile.email.split('@')[0]}
-          </div>
-          <div className="text-xs text-[var(--accent-text)]">Wants to be friends</div>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button
-          onClick={onReject}
-          className="p-2 text-[var(--muted)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-          title="Decline"
-        >
-          <X size={18} />
-        </button>
-        <button
-          onClick={onAccept}
-          className="p-2 text-[var(--accent-text)] hover:text-[var(--accent-text-light)] hover:bg-[var(--accent-bg-hover)] rounded-lg transition-colors"
-          title="Accept"
-        >
-          <Check size={18} />
-        </button>
       </div>
     </div>
   )
