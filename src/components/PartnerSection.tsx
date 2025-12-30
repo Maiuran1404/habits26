@@ -60,15 +60,26 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   const supabase = createClient()
 
   const fetchPartners = async () => {
-    if (!user) return
+    if (!user) {
+      setPartners([])
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     try {
-      const { data: partnerships } = await supabase
+      const { data: partnerships, error: partnershipError } = await supabase
         .from('partnerships')
         .select('*')
         .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
         .eq('status', 'accepted')
+
+      if (partnershipError) {
+        console.error('Error fetching partnerships:', partnershipError)
+        setPartners([])
+        setLoading(false)
+        return
+      }
 
       if (!partnerships || partnerships.length === 0) {
         setPartners([])
@@ -108,26 +119,46 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       setPartners(partnerData)
     } catch (error) {
       console.error('Error fetching partners:', error)
+      setPartners([])
     } finally {
       setLoading(false)
     }
   }
 
   const fetchPendingRequests = async () => {
-    if (!user) return
+    if (!user) {
+      setPendingRequests([])
+      return
+    }
 
-    const { data } = await supabase
-      .from('partnerships')
-      .select('*')
-      .eq('partner_id', user.id)
-      .eq('status', 'pending')
+    try {
+      const { data, error } = await supabase
+        .from('partnerships')
+        .select('*')
+        .eq('partner_id', user.id)
+        .eq('status', 'pending')
 
-    setPendingRequests(data || [])
+      if (error) {
+        console.error('Error fetching pending requests:', error)
+        setPendingRequests([])
+      } else {
+        setPendingRequests(data || [])
+      }
+    } catch (err) {
+      console.error('Error fetching pending requests:', err)
+      setPendingRequests([])
+    }
   }
 
   useEffect(() => {
-    fetchPartners()
-    fetchPendingRequests()
+    if (user) {
+      fetchPartners()
+      fetchPendingRequests()
+    } else {
+      setPartners([])
+      setPendingRequests([])
+      setLoading(false)
+    }
   }, [user, quarter, year])
 
   const handleInvite = async (e: React.FormEvent) => {

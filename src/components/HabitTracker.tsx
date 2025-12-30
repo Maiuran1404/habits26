@@ -32,21 +32,28 @@ export default function HabitTracker() {
     }
 
     setLoading(true)
-    const { data, error } = await supabase
-      .from('habits')
-      .select('*, entries:habit_entries(*)')
-      .eq('user_id', user.id)
-      .eq('archived', false)
-      .order('created_at', { ascending: true })
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*, entries:habit_entries(*)')
+        .eq('user_id', user.id)
+        .eq('archived', false)
+        .order('created_at', { ascending: true })
 
-    if (error) {
-      console.error('Error fetching habits:', error)
+      if (error) {
+        console.error('Error fetching habits:', error)
+        setHabits([])
+      } else if (data) {
+        setHabits(data as HabitWithEntries[])
+      } else {
+        setHabits([])
+      }
+    } catch (err) {
+      console.error('Error fetching habits:', err)
+      setHabits([])
+    } finally {
+      setLoading(false)
     }
-
-    if (data) {
-      setHabits(data as HabitWithEntries[])
-    }
-    setLoading(false)
   }, [user])
 
   useEffect(() => {
