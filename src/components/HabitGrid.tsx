@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { format, eachDayOfInterval, startOfWeek, getDay } from 'date-fns'
+import { format, eachDayOfInterval, getDay } from 'date-fns'
 import { HabitEntry, Quarter, getQuarterDates } from '@/types/database'
 
 interface HabitGridProps {
@@ -81,26 +81,22 @@ export default function HabitGrid({
           const dateStr = format(day, 'yyyy-MM-dd')
           const entry = entryMap.get(dateStr)
           const isToday = dateStr === today
-          const isPast = dateStr < today
           const isFuture = dateStr > today
 
-          let bgColor = 'bg-zinc-800'
-          let opacity = '0.3'
+          let bgStyle = 'bg-[var(--card-border)]'
+          let customBg: string | undefined
 
           if (entry) {
             if (entry.status === 'done') {
-              bgColor = ''
-              opacity = '1'
+              bgStyle = ''
+              customBg = color
             } else if (entry.status === 'missed') {
-              bgColor = 'bg-red-500'
-              opacity = '0.6'
+              bgStyle = 'bg-red-500/60'
             } else if (entry.status === 'skipped') {
-              bgColor = 'bg-zinc-600'
-              opacity = '0.5'
+              bgStyle = 'bg-[var(--muted-light)]/50'
             }
           } else if (isFuture) {
-            bgColor = 'bg-zinc-800/30'
-            opacity = '0.2'
+            bgStyle = 'bg-[var(--card-border)]/30'
           }
 
           return (
@@ -110,10 +106,9 @@ export default function HabitGrid({
               disabled={readonly || isFuture}
               className={`w-3 h-3 sm:w-4 sm:h-4 rounded-sm transition-all ${
                 !readonly && !isFuture ? 'hover:scale-110 cursor-pointer' : ''
-              } ${isToday ? 'ring-1 ring-white/50' : ''} ${bgColor}`}
+              } ${isToday ? 'ring-1 ring-[var(--foreground)]/50' : ''} ${bgStyle}`}
               style={{
-                backgroundColor: entry?.status === 'done' ? color : undefined,
-                opacity: entry?.status === 'done' ? 1 : undefined,
+                backgroundColor: customBg,
               }}
               title={`${format(day, 'MMM d, yyyy')}${entry ? ` - ${entry.status}` : ''}`}
             />

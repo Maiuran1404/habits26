@@ -45,22 +45,22 @@ export default function QuarterSelector({
     <div className="flex items-center gap-3">
       <button
         onClick={goToPrevious}
-        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+        className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
       >
         <ChevronLeft size={20} />
       </button>
 
       <div className="text-center min-w-[160px]">
-        <div className="text-xl font-bold text-white">
+        <div className="text-xl font-bold text-[var(--foreground)]">
           {quarter} {year}
         </div>
-        <div className="text-xs text-zinc-500">{quarterLabels[quarter]}</div>
-        <div className="text-xs text-emerald-500 font-medium mt-0.5">90-day sprint</div>
+        <div className="text-xs text-[var(--muted-light)]">{quarterLabels[quarter]}</div>
+        <div className="text-xs text-[var(--accent-text)] font-medium mt-0.5">90-day sprint</div>
       </div>
 
       <button
         onClick={goToNext}
-        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+        className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
       >
         <ChevronRight size={20} />
       </button>

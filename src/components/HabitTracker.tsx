@@ -10,6 +10,7 @@ import HabitCard from './HabitCard'
 import HabitModal from './HabitModal'
 import QuarterSelector from './QuarterSelector'
 import PartnerSection from './PartnerSection'
+import ThemeToggle from './ThemeToggle'
 
 export default function HabitTracker() {
   const { user, profile, setShowAuthModal, signOut } = useAuth()
@@ -215,15 +216,15 @@ export default function HabitTracker() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-lg border-b border-zinc-800">
+      <header className="sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--card-border)]">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center">
               <Target size={18} className="text-white" />
             </div>
-            <h1 className="text-xl font-bold text-white">Habits</h1>
+            <h1 className="text-xl font-bold text-[var(--foreground)]">Habits</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -234,7 +235,7 @@ export default function HabitTracker() {
                     setEditingHabit(null)
                     setShowHabitModal(true)
                   }}
-                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
                 >
                   <Plus size={16} />
                   Create
@@ -242,7 +243,7 @@ export default function HabitTracker() {
                 <div className="relative">
                   <button
                     onClick={() => setShowSettings(!showSettings)}
-                    className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                    className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
                   >
                     <Settings size={18} />
                   </button>
@@ -252,19 +253,20 @@ export default function HabitTracker() {
                         className="fixed inset-0"
                         onClick={() => setShowSettings(false)}
                       />
-                      <div className="absolute right-0 top-full mt-2 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden min-w-[180px]">
-                        <div className="px-4 py-3 border-b border-zinc-800">
-                          <p className="text-sm font-medium text-white">
+                      <div className="absolute right-0 top-full mt-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-xl overflow-hidden min-w-[180px] backdrop-blur">
+                        <div className="px-4 py-3 border-b border-[var(--card-border)]">
+                          <p className="text-sm font-medium text-[var(--foreground)]">
                             {profile?.display_name || user.email?.split('@')[0]}
                           </p>
-                          <p className="text-xs text-zinc-500">{user.email}</p>
+                          <p className="text-xs text-[var(--muted-light)]">{user.email}</p>
                         </div>
+                        <ThemeToggle />
                         <button
                           onClick={() => {
                             signOut()
                             setShowSettings(false)
                           }}
-                          className="w-full flex items-center gap-2 px-4 py-3 text-sm text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                          className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] transition-colors border-t border-[var(--card-border)]"
                         >
                           <LogOut size={16} />
                           Sign Out
@@ -277,7 +279,7 @@ export default function HabitTracker() {
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
+                className="bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
               >
                 Sign In
               </button>
@@ -291,15 +293,15 @@ export default function HabitTracker() {
         {user && profile && (
           <div className="mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-2xl text-white font-medium ring-2 ring-zinc-700">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-700)] flex items-center justify-center text-2xl text-white font-medium ring-2 ring-[var(--accent-500)]">
                 {profile.display_name?.[0]?.toUpperCase() ||
                   profile.email[0].toUpperCase()}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-[var(--foreground)]">
                   {profile.display_name || profile.email.split('@')[0]}
                 </h2>
-                <p className="text-zinc-500 text-sm">
+                <p className="text-[var(--muted-light)] text-sm">
                   {habits.length} habit{habits.length !== 1 ? 's' : ''} this sprint
                 </p>
               </div>
@@ -323,33 +325,33 @@ export default function HabitTracker() {
         {!user ? (
           // Not logged in - Welcome state
           <div className="text-center py-20">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">
               <div className="grid grid-cols-4 gap-1">
                 {[...Array(16)].map((_, i) => (
                   <div
                     key={i}
                     className="w-2.5 h-2.5 rounded-sm transition-colors"
                     style={{
-                      backgroundColor: [0, 5, 6, 9, 10, 15].includes(i) ? '#22c55e' : '#27272a',
+                      backgroundColor: [0, 5, 6, 9, 10, 15].includes(i) ? 'var(--accent-500)' : 'var(--card-border)',
                       opacity: [0, 5, 6, 9, 10, 15].includes(i) ? 1 : 0.3,
                     }}
                   />
                 ))}
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">
+            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-3">
               Build Better Habits
             </h2>
-            <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
+            <p className="text-[var(--muted)] mb-8 max-w-md mx-auto leading-relaxed">
               Track your daily progress, set quarterly goals, and stay accountable with friends. Simple, visual, and effective.
             </p>
             <button
               onClick={() => setShowAuthModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-8 py-3 rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
+              className="bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-8 py-3 rounded-xl transition-all hover:scale-105 shadow-lg shadow-green-500/20"
             >
               Get Started Free
             </button>
-            <p className="text-zinc-600 text-sm mt-4">
+            <p className="text-[var(--muted-light)] text-sm mt-4">
               No credit card required
             </p>
           </div>
@@ -357,17 +359,17 @@ export default function HabitTracker() {
           // Loading state
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-zinc-900/50 rounded-xl p-5 animate-pulse">
+              <div key={i} className="bg-[var(--card-bg)] rounded-xl p-5 animate-pulse border border-[var(--card-border)]">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <div className="h-5 w-32 bg-zinc-800 rounded mb-2" />
-                    <div className="h-3 w-48 bg-zinc-800/50 rounded" />
+                    <div className="h-5 w-32 bg-[var(--card-border)] rounded mb-2" />
+                    <div className="h-3 w-48 bg-[var(--card-border)] rounded opacity-50" />
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="grid grid-cols-7 gap-1">
                     {[...Array(28)].map((_, j) => (
-                      <div key={j} className="w-3 h-3 bg-zinc-800/50 rounded-sm" />
+                      <div key={j} className="w-3 h-3 bg-[var(--card-border)] rounded-sm opacity-50" />
                     ))}
                   </div>
                 </div>
@@ -377,13 +379,13 @@ export default function HabitTracker() {
         ) : habits.length === 0 ? (
           // Empty state - No habits yet
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700/50">
-              <Sparkles className="text-emerald-500" size={32} />
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[var(--card-bg)] flex items-center justify-center border border-[var(--card-border)]">
+              <Sparkles className="text-[var(--accent-500)]" size={32} />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">
+            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
               Start Your Journey
             </h3>
-            <p className="text-zinc-400 mb-6 max-w-sm mx-auto">
+            <p className="text-[var(--muted)] mb-6 max-w-sm mx-auto">
               Create your first habit and begin tracking your progress. Small steps lead to big changes.
             </p>
             <button
@@ -391,15 +393,15 @@ export default function HabitTracker() {
                 setEditingHabit(null)
                 setShowHabitModal(true)
               }}
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-2.5 rounded-xl transition-all hover:scale-105"
+              className="inline-flex items-center gap-2 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-6 py-2.5 rounded-xl transition-all hover:scale-105"
             >
               <Plus size={18} />
               Create Your First Habit
             </button>
 
             {/* Suggested habits */}
-            <div className="mt-10 pt-8 border-t border-zinc-800/50">
-              <p className="text-zinc-500 text-sm mb-4">Popular habits to get started</p>
+            <div className="mt-10 pt-8 border-t border-[var(--card-border)]">
+              <p className="text-[var(--muted-light)] text-sm mb-4">Popular habits to get started</p>
               <div className="flex flex-wrap justify-center gap-2">
                 {['Morning Exercise', 'Read 30 mins', 'Meditate', 'Drink Water', 'No Social Media'].map((suggestion) => (
                   <button
@@ -408,7 +410,7 @@ export default function HabitTracker() {
                       setEditingHabit(null)
                       setShowHabitModal(true)
                     }}
-                    className="px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white text-sm rounded-lg transition-colors border border-zinc-700/50"
+                    className="px-3 py-1.5 bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] text-[var(--muted)] hover:text-[var(--foreground)] text-sm rounded-lg transition-colors border border-[var(--card-border)]"
                   >
                     {suggestion}
                   </button>

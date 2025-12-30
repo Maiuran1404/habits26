@@ -62,18 +62,18 @@ export default function AuthModal() {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => setShowAuthModal(false)}
       />
-      <div className="relative bg-zinc-900 rounded-2xl p-8 w-full max-w-md mx-4 border border-zinc-800 shadow-2xl">
+      <div className="relative bg-[var(--card-bg)] rounded-2xl p-8 w-full max-w-md mx-4 border border-[var(--card-border)] shadow-2xl backdrop-blur">
         <button
           onClick={() => setShowAuthModal(false)}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
         >
           <X size={20} />
         </button>
 
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
           {isSignUp ? 'Create Account' : 'Welcome Back'}
         </h2>
-        <p className="text-zinc-400 mb-6">
+        <p className="text-[var(--muted)] mb-6">
           {isSignUp
             ? 'Start tracking your habits with friends'
             : 'Sign in to continue your progress'}
@@ -86,7 +86,7 @@ export default function AuthModal() {
         )}
 
         {message && (
-          <div className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+          <div className="mb-4 p-3 bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-lg text-[var(--accent-text)] text-sm">
             {message}
           </div>
         )}
@@ -94,45 +94,45 @@ export default function AuthModal() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+              <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
                 Display Name
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Your name"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                  className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+            <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+            <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
               <input
                 type="password"
                 value={password}
@@ -140,7 +140,7 @@ export default function AuthModal() {
                 placeholder="••••••••"
                 required
                 minLength={6}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               />
             </div>
           </div>
@@ -148,7 +148,7 @@ export default function AuthModal() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white font-medium py-2.5 rounded-lg transition-colors"
+            className="w-full bg-[var(--accent-600)] hover:bg-[var(--accent-500)] disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors"
           >
             {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
           </button>
@@ -161,7 +161,7 @@ export default function AuthModal() {
               setError(null)
               setMessage(null)
             }}
-            className="text-zinc-400 hover:text-white transition-colors text-sm"
+            className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm"
           >
             {isSignUp
               ? 'Already have an account? Sign in'

@@ -83,12 +83,12 @@ export default function HabitCard({
   }, [habit.entries])
 
   return (
-    <div className="bg-zinc-900/80 backdrop-blur rounded-xl p-4 sm:p-5 border border-zinc-800 hover:border-zinc-700 transition-colors">
+    <div className="bg-[var(--card-bg)] backdrop-blur rounded-xl p-4 sm:p-5 border border-[var(--card-border)] hover:border-[var(--card-hover-border)] transition-colors">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-white text-lg truncate">{habit.name}</h3>
+          <h3 className="font-semibold text-[var(--foreground)] text-lg truncate">{habit.name}</h3>
           {habit.description && (
-            <p className="text-zinc-400 text-sm mt-1 line-clamp-2">{habit.description}</p>
+            <p className="text-[var(--muted)] text-sm mt-1 line-clamp-2">{habit.description}</p>
           )}
         </div>
 
@@ -96,13 +96,13 @@ export default function HabitCard({
           <div className="flex items-center gap-1 ml-2">
             <button
               onClick={() => onEdit?.(habit)}
-              className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--muted-light)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
             >
               <Edit2 size={16} />
             </button>
             <button
               onClick={() => onDelete?.(habit.id)}
-              className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
+              className="p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
             >
               <Trash2 size={16} />
             </button>
@@ -129,11 +129,11 @@ export default function HabitCard({
           >
             {stats.percentage}%
           </div>
-          <div className="text-xs text-zinc-500">
+          <div className="text-xs text-[var(--muted-light)]">
             {stats.completed}/{stats.total}
           </div>
           {!weeklyStats.isDaily && (
-            <div className="text-xs text-zinc-400 mt-1 font-medium">
+            <div className="text-xs text-[var(--muted)] mt-1 font-medium">
               {weeklyStats.completed}/{weeklyStats.target} this week
             </div>
           )}
@@ -152,7 +152,7 @@ export default function HabitCard({
                   ? 'shadow-lg'
                   : todayEntry?.status === 'missed'
                   ? 'bg-red-500/20'
-                  : 'bg-zinc-800 hover:bg-zinc-700'
+                  : 'bg-[var(--card-border)] hover:bg-[var(--card-hover-border)]'
               }`}
               style={{
                 backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
@@ -163,7 +163,7 @@ export default function HabitCard({
               ) : todayEntry?.status === 'missed' ? (
                 <X size={24} className="text-red-400" />
               ) : (
-                <Circle size={24} className="text-zinc-500" />
+                <Circle size={24} className="text-[var(--muted-light)]" />
               )}
             </div>
           </button>
