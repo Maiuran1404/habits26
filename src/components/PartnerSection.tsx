@@ -67,6 +67,14 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
     }
 
     setLoading(true)
+
+    // Timeout safety net (5 seconds)
+    const timeout = setTimeout(() => {
+      console.warn('Partners fetch timed out - check if database tables exist')
+      setPartners([])
+      setLoading(false)
+    }, 5000)
+
     try {
       const { data: partnerships, error: partnershipError } = await supabase
         .from('partnerships')
@@ -75,6 +83,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         .eq('status', 'accepted')
 
       if (partnershipError) {
+        clearTimeout(timeout)
         console.error('Error fetching partnerships:', partnershipError)
         setPartners([])
         setLoading(false)
@@ -82,6 +91,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       }
 
       if (!partnerships || partnerships.length === 0) {
+        clearTimeout(timeout)
         setPartners([])
         setLoading(false)
         return
@@ -116,8 +126,10 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         }
       }).filter((p: PartnerData) => p.profile)
 
+      clearTimeout(timeout)
       setPartners(partnerData)
     } catch (error) {
+      clearTimeout(timeout)
       console.error('Error fetching partners:', error)
       setPartners([])
     } finally {
@@ -305,8 +317,8 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       ) : partners.length === 0 ? (
         /* Empty State - No Friends */
         <div className="text-center py-12 px-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)]">
-          <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center border border-pink-500/20">
-            <Heart className="text-pink-400" size={28} />
+          <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">
+            <Users className="text-[var(--accent-text)]" size={28} />
           </div>
           <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
             Better Together
@@ -316,7 +328,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
           </p>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white font-medium px-5 py-2.5 rounded-xl transition-all hover:scale-105 shadow-lg shadow-purple-500/20"
+            className="inline-flex items-center gap-2 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-5 py-2.5 rounded-xl transition-all hover:scale-105 shadow-lg shadow-green-500/20"
           >
             <UserPlus size={16} />
             Add Your First Friend
@@ -443,7 +455,7 @@ function FriendHabitsSection({
       {/* Friend Header */}
       <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)] bg-[var(--accent-bg)]/30">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium ring-2 ring-purple-400/30">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)] flex items-center justify-center text-white font-medium ring-2 ring-[var(--accent-500)]/30">
             {partner.profile.display_name?.[0]?.toUpperCase() ||
               partner.profile.email[0].toUpperCase()}
           </div>
@@ -462,7 +474,7 @@ function FriendHabitsSection({
         {/* Progress indicator */}
         {partner.habits.length > 0 && (
           <div className="text-right">
-            <div className="text-lg font-bold text-purple-400">
+            <div className="text-lg font-bold text-[var(--accent-text)]">
               {progress}%
             </div>
             <div className="text-xs text-[var(--muted-light)]">

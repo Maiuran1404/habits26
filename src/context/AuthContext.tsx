@@ -82,10 +82,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
-    setSession(null)
+    try {
+      // Clear local state first for immediate UI feedback
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut()
+
+      if (error) {
+        console.error('Error signing out:', error)
+      }
+
+      // Force reload to clear any cached state
+      window.location.reload()
+    } catch (err) {
+      console.error('Error during sign out:', err)
+      // Still reload even if there's an error
+      window.location.reload()
+    }
   }
 
   return (

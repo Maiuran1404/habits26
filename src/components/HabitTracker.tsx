@@ -32,6 +32,14 @@ export default function HabitTracker() {
     }
 
     setLoading(true)
+
+    // Timeout safety net - don't hang forever (5 seconds)
+    const timeout = setTimeout(() => {
+      console.warn('Habits fetch timed out - check if database tables exist')
+      setHabits([])
+      setLoading(false)
+    }, 5000)
+
     try {
       const { data, error } = await supabase
         .from('habits')
@@ -39,6 +47,8 @@ export default function HabitTracker() {
         .eq('user_id', user.id)
         .eq('archived', false)
         .order('created_at', { ascending: true })
+
+      clearTimeout(timeout)
 
       if (error) {
         console.error('Error fetching habits:', error)
@@ -49,6 +59,7 @@ export default function HabitTracker() {
         setHabits([])
       }
     } catch (err) {
+      clearTimeout(timeout)
       console.error('Error fetching habits:', err)
       setHabits([])
     } finally {
