@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, LogOut, Settings } from 'lucide-react'
+import { Plus, LogOut, Settings, Target, Sparkles, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { HabitWithEntries, Quarter, getCurrentQuarter, Habit } from '@/types/database'
@@ -37,7 +37,11 @@ export default function HabitTracker() {
       .eq('archived', false)
       .order('created_at', { ascending: true })
 
-    if (!error && data) {
+    if (error) {
+      console.error('Error fetching habits:', error)
+    }
+
+    if (data) {
       setHabits(data as HabitWithEntries[])
     }
     setLoading(false)
@@ -56,7 +60,6 @@ export default function HabitTracker() {
     const existingEntry = habit.entries.find((e) => e.date === date)
 
     if (existingEntry) {
-      // Cycle through states: done -> missed -> none
       if (existingEntry.status === 'done') {
         await supabase
           .from('habit_entries')
@@ -69,7 +72,6 @@ export default function HabitTracker() {
           .eq('id', existingEntry.id)
       }
     } else {
-      // Create new entry as done
       await supabase.from('habit_entries').insert({
         habit_id: habitId,
         date,
@@ -85,18 +87,22 @@ export default function HabitTracker() {
     description: string
     color: string
   }) => {
-    if (!user) return
+    if (!user) throw new Error('You must be logged in')
 
     if (editingHabit) {
-      await supabase
+      const { error } = await supabase
         .from('habits')
         .update(habitData)
         .eq('id', editingHabit.id)
+
+      if (error) throw new Error(error.message)
     } else {
-      await supabase.from('habits').insert({
+      const { error } = await supabase.from('habits').insert({
         ...habitData,
         user_id: user.id,
       })
+
+      if (error) throw new Error(error.message)
     }
 
     setEditingHabit(null)
@@ -120,7 +126,12 @@ export default function HabitTracker() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-zinc-950/80 backdrop-blur-lg border-b border-zinc-800">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">Habits</h1>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+              <Target size={18} className="text-white" />
+            </div>
+            <h1 className="text-xl font-bold text-white">Habits</h1>
+          </div>
 
           <div className="flex items-center gap-2">
             {user ? (
@@ -187,7 +198,7 @@ export default function HabitTracker() {
         {user && profile && (
           <div className="mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center text-2xl text-white font-medium">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-2xl text-white font-medium ring-2 ring-zinc-700">
                 {profile.display_name?.[0]?.toUpperCase() ||
                   profile.email[0].toUpperCase()}
               </div>
@@ -217,53 +228,103 @@ export default function HabitTracker() {
 
         {/* Habits List */}
         {!user ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-zinc-900 flex items-center justify-center">
-              <div className="grid grid-cols-3 gap-1">
-                {[...Array(9)].map((_, i) => (
+          // Not logged in - Welcome state
+          <div className="text-center py-20">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center border border-emerald-500/20">
+              <div className="grid grid-cols-4 gap-1">
+                {[...Array(16)].map((_, i) => (
                   <div
                     key={i}
-                    className="w-2 h-2 rounded-sm"
+                    className="w-2.5 h-2.5 rounded-sm transition-colors"
                     style={{
-                      backgroundColor: i % 2 === 0 ? '#22c55e' : '#27272a',
+                      backgroundColor: [0, 5, 6, 9, 10, 15].includes(i) ? '#22c55e' : '#27272a',
+                      opacity: [0, 5, 6, 9, 10, 15].includes(i) ? 1 : 0.3,
                     }}
                   />
                 ))}
               </div>
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">
-              Track Your Habits
+            <h2 className="text-2xl font-bold text-white mb-3">
+              Build Better Habits
             </h2>
-            <p className="text-zinc-500 mb-6 max-w-sm mx-auto">
-              Sign in to start tracking your daily habits and see your progress over quarterly sprints
+            <p className="text-zinc-400 mb-8 max-w-md mx-auto leading-relaxed">
+              Track your daily progress, set quarterly goals, and stay accountable with friends. Simple, visual, and effective.
             </p>
             <button
               onClick={() => setShowAuthModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-2.5 rounded-lg transition-colors"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-8 py-3 rounded-xl transition-all hover:scale-105 shadow-lg shadow-emerald-500/20"
             >
-              Get Started
+              Get Started Free
             </button>
+            <p className="text-zinc-600 text-sm mt-4">
+              No credit card required
+            </p>
           </div>
         ) : loading ? (
-          <div className="text-center py-16 text-zinc-500">Loading habits...</div>
+          // Loading state
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-zinc-900/50 rounded-xl p-5 animate-pulse">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <div className="h-5 w-32 bg-zinc-800 rounded mb-2" />
+                    <div className="h-3 w-48 bg-zinc-800/50 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="grid grid-cols-7 gap-1">
+                    {[...Array(28)].map((_, j) => (
+                      <div key={j} className="w-3 h-3 bg-zinc-800/50 rounded-sm" />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : habits.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-zinc-800 rounded-xl">
-            <Plus className="mx-auto text-zinc-600 mb-2" size={32} />
-            <p className="text-zinc-500 text-sm">No habits yet</p>
-            <p className="text-zinc-600 text-xs mt-1 mb-4">
-              Create your first habit to start tracking
+          // Empty state - No habits yet
+          <div className="text-center py-16">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700/50">
+              <Sparkles className="text-emerald-500" size={32} />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Start Your Journey
+            </h3>
+            <p className="text-zinc-400 mb-6 max-w-sm mx-auto">
+              Create your first habit and begin tracking your progress. Small steps lead to big changes.
             </p>
             <button
               onClick={() => {
                 setEditingHabit(null)
                 setShowHabitModal(true)
               }}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-2.5 rounded-xl transition-all hover:scale-105"
             >
-              Create Habit
+              <Plus size={18} />
+              Create Your First Habit
             </button>
+
+            {/* Suggested habits */}
+            <div className="mt-10 pt-8 border-t border-zinc-800/50">
+              <p className="text-zinc-500 text-sm mb-4">Popular habits to get started</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {['Morning Exercise', 'Read 30 mins', 'Meditate', 'Drink Water', 'No Social Media'].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => {
+                      setEditingHabit(null)
+                      setShowHabitModal(true)
+                    }}
+                    className="px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-800 text-zinc-400 hover:text-white text-sm rounded-lg transition-colors border border-zinc-700/50"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         ) : (
+          // Habits list
           <div className="space-y-4">
             {habits.map((habit) => (
               <HabitCard

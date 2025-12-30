@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, AlertCircle } from 'lucide-react'
 import { Habit } from '@/types/database'
 
 interface HabitModalProps {
@@ -32,6 +32,7 @@ export default function HabitModal({
   const [description, setDescription] = useState('')
   const [color, setColor] = useState(colorOptions[0])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (habit) {
@@ -43,6 +44,7 @@ export default function HabitModal({
       setDescription('')
       setColor(colorOptions[0])
     }
+    setError(null)
   }, [habit, isOpen])
 
   if (!isOpen) return null
@@ -52,9 +54,14 @@ export default function HabitModal({
     if (!name.trim()) return
 
     setLoading(true)
+    setError(null)
+
     try {
       await onSave({ name: name.trim(), description: description.trim(), color })
       onClose()
+    } catch (err) {
+      console.error('Failed to save habit:', err)
+      setError(err instanceof Error ? err.message : 'Failed to save habit. Please make sure the database is set up.')
     } finally {
       setLoading(false)
     }
@@ -77,6 +84,18 @@ export default function HabitModal({
         <h2 className="text-xl font-bold text-white mb-6">
           {habit ? 'Edit Habit' : 'Create New Habit'}
         </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-2">
+            <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+            <div>
+              <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-red-400/60 text-xs mt-1">
+                Have you run the SQL schema in Supabase?
+              </p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, X, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Users, UserPlus, X, Check, ChevronDown, ChevronUp, Heart, Mail, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Profile, HabitWithEntries, Quarter, Partnership } from '@/types/database'
@@ -26,6 +26,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteSuccess, setInviteSuccess] = useState(false)
   const [expandedPartners, setExpandedPartners] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
@@ -36,7 +37,6 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
     setLoading(true)
     try {
-      // Get accepted partnerships where user is either requester or partner
       const { data: partnerships } = await supabase
         .from('partnerships')
         .select('*')
@@ -49,18 +49,15 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         return
       }
 
-      // Get partner IDs (the other person in each partnership)
       const partnerIds = partnerships.map((p: Partnership) =>
         p.user_id === user.id ? p.partner_id : p.user_id
       )
 
-      // Fetch partner profiles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('*')
         .in('id', partnerIds)
 
-      // Fetch partner habits with entries
       const { data: habits } = await supabase
         .from('habits')
         .select('*, entries:habit_entries(*)')
@@ -112,15 +109,15 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
     setInviteLoading(true)
     setInviteError(null)
+    setInviteSuccess(false)
 
     try {
-      // Find user by email
       const { data: foundUsers, error: findError } = await supabase
         .rpc('find_user_by_email', { search_email: inviteEmail.trim() })
 
       if (findError) throw findError
       if (!foundUsers || foundUsers.length === 0) {
-        setInviteError('No user found with that email')
+        setInviteError('No user found with that email. They need to sign up first.')
         setInviteLoading(false)
         return
       }
@@ -133,7 +130,6 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         return
       }
 
-      // Check if partnership already exists
       const { data: existing } = await supabase
         .from('partnerships')
         .select('*')
@@ -146,7 +142,6 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         return
       }
 
-      // Create partnership request
       const { error: insertError } = await supabase
         .from('partnerships')
         .insert({
@@ -157,8 +152,12 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
       if (insertError) throw insertError
 
+      setInviteSuccess(true)
       setInviteEmail('')
-      setShowInviteModal(false)
+      setTimeout(() => {
+        setShowInviteModal(false)
+        setInviteSuccess(false)
+      }, 1500)
     } catch (error) {
       setInviteError(error instanceof Error ? error.message : 'Failed to send invite')
     } finally {
@@ -204,29 +203,32 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   if (!user) return null
 
   return (
-    <div className="mt-8">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Users className="text-zinc-400" size={20} />
-          <h2 className="text-lg font-semibold text-white">Partners</h2>
+    <div className="mt-10 pt-8 border-t border-zinc-800/50">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center border border-pink-500/20">
+            <Users className="text-pink-400" size={16} />
+          </div>
+          <h2 className="text-lg font-semibold text-white">Accountability Partners</h2>
           {partners.length > 0 && (
-            <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded-full">
               {partners.length}
             </span>
           )}
         </div>
         <button
           onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-emerald-400 hover:text-emerald-300 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg"
         >
-          <UserPlus size={16} />
-          Add Partner
+          <UserPlus size={14} />
+          Invite
         </button>
       </div>
 
       {/* Pending Requests */}
       {pendingRequests.length > 0 && (
-        <div className="mb-4 space-y-2">
+        <div className="mb-5 space-y-2">
+          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Pending Requests</p>
           {pendingRequests.map((request) => (
             <PendingRequestCard
               key={request.id}
@@ -240,28 +242,53 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
       {/* Partners List */}
       {loading ? (
-        <div className="text-center py-8 text-zinc-500">Loading partners...</div>
+        // Loading state
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-zinc-900/50 rounded-xl p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-zinc-800" />
+                <div>
+                  <div className="h-4 w-24 bg-zinc-800 rounded mb-1.5" />
+                  <div className="h-3 w-16 bg-zinc-800/50 rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       ) : partners.length === 0 ? (
-        <div className="text-center py-8 border border-dashed border-zinc-800 rounded-xl">
-          <Users className="mx-auto text-zinc-600 mb-2" size={32} />
-          <p className="text-zinc-500 text-sm">No partners yet</p>
-          <p className="text-zinc-600 text-xs mt-1">
-            Invite friends to track habits together
+        // Empty state
+        <div className="text-center py-12 px-4">
+          <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-pink-500/10 to-purple-500/10 flex items-center justify-center border border-pink-500/20">
+            <Heart className="text-pink-400" size={28} />
+          </div>
+          <h3 className="text-lg font-medium text-white mb-2">
+            Better Together
+          </h3>
+          <p className="text-zinc-400 text-sm mb-6 max-w-xs mx-auto leading-relaxed">
+            Invite a friend, partner, or colleague to track habits together. You&apos;ll be able to see each other&apos;s progress and stay motivated.
           </p>
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-medium px-5 py-2.5 rounded-xl transition-all hover:scale-105 shadow-lg shadow-pink-500/20"
+          >
+            <UserPlus size={16} />
+            Invite Your First Partner
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
           {partners.map((partner) => (
             <div
               key={partner.partnership.id}
-              className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden"
+              className="bg-zinc-900/50 border border-zinc-800 rounded-xl overflow-hidden hover:border-zinc-700 transition-colors"
             >
               <button
                 onClick={() => togglePartnerExpanded(partner.profile.id)}
-                className="w-full flex items-center justify-between p-4 hover:bg-zinc-800/50 transition-colors"
+                className="w-full flex items-center justify-between p-4 hover:bg-zinc-800/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-white font-medium">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-600 to-zinc-700 flex items-center justify-center text-white font-medium ring-2 ring-zinc-600">
                     {partner.profile.display_name?.[0]?.toUpperCase() ||
                       partner.profile.email[0].toUpperCase()}
                   </div>
@@ -270,7 +297,9 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
                       {partner.profile.display_name || partner.profile.email.split('@')[0]}
                     </div>
                     <div className="text-xs text-zinc-500">
-                      {partner.habits.length} habits
+                      {partner.habits.length === 0
+                        ? 'No habits yet'
+                        : `${partner.habits.length} habit${partner.habits.length !== 1 ? 's' : ''}`}
                     </div>
                   </div>
                 </div>
@@ -282,11 +311,16 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
               </button>
 
               {expandedPartners.has(partner.profile.id) && (
-                <div className="border-t border-zinc-800 p-4 space-y-3">
+                <div className="border-t border-zinc-800 p-4 space-y-3 bg-zinc-900/30">
                   {partner.habits.length === 0 ? (
-                    <p className="text-zinc-500 text-sm text-center py-4">
-                      No habits to show
-                    </p>
+                    <div className="text-center py-6">
+                      <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-zinc-800/50 flex items-center justify-center">
+                        <Users className="text-zinc-600" size={18} />
+                      </div>
+                      <p className="text-zinc-500 text-sm">
+                        {partner.profile.display_name || 'Your partner'} hasn&apos;t created any habits yet
+                      </p>
+                    </div>
                   ) : (
                     partner.habits.map((habit) => (
                       <HabitCard
@@ -310,54 +344,81 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowInviteModal(false)}
+            onClick={() => !inviteLoading && setShowInviteModal(false)}
           />
           <div className="relative bg-zinc-900 rounded-2xl p-6 w-full max-w-md mx-4 border border-zinc-800 shadow-2xl">
             <button
-              onClick={() => setShowInviteModal(false)}
+              onClick={() => !inviteLoading && setShowInviteModal(false)}
               className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
             >
               <X size={20} />
             </button>
 
-            <h2 className="text-xl font-bold text-white mb-2">Add Partner</h2>
-            <p className="text-zinc-400 text-sm mb-6">
-              Enter your partner&apos;s email to send them an invitation
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center border border-pink-500/20">
+              <UserPlus className="text-pink-400" size={22} />
+            </div>
+
+            <h2 className="text-xl font-bold text-white text-center mb-1">Invite a Partner</h2>
+            <p className="text-zinc-400 text-sm text-center mb-6">
+              They&apos;ll receive a request to connect
             </p>
 
-            {inviteError && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                {inviteError}
+            {inviteSuccess ? (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <Check className="text-emerald-400" size={24} />
+                </div>
+                <p className="text-emerald-400 font-medium">Invitation Sent!</p>
               </div>
+            ) : (
+              <>
+                {inviteError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                    {inviteError}
+                  </div>
+                )}
+
+                <form onSubmit={handleInvite} className="space-y-4">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="partner@example.com"
+                      required
+                      disabled={inviteLoading}
+                      className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:border-pink-500 transition-colors disabled:opacity-50"
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowInviteModal(false)}
+                      disabled={inviteLoading}
+                      className="flex-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={inviteLoading || !inviteEmail.trim()}
+                      className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      {inviteLoading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Send Invite'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </>
             )}
-
-            <form onSubmit={handleInvite} className="space-y-4">
-              <input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="partner@example.com"
-                required
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 px-4 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2.5 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={inviteLoading}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white font-medium py-2.5 rounded-lg transition-colors"
-                >
-                  {inviteLoading ? 'Sending...' : 'Send Invite'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
@@ -375,6 +436,7 @@ function PendingRequestCard({
   onReject: () => void
 }) {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
   useEffect(() => {
@@ -386,35 +448,52 @@ function PendingRequestCard({
         .single()
 
       if (data) setProfile(data as Profile)
+      setLoading(false)
     }
     fetchProfile()
   }, [request.user_id])
 
+  if (loading) {
+    return (
+      <div className="bg-zinc-900/80 border border-emerald-500/30 rounded-xl p-4 animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-zinc-800" />
+          <div>
+            <div className="h-4 w-24 bg-zinc-800 rounded mb-1" />
+            <div className="h-3 w-16 bg-zinc-800/50 rounded" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!profile) return null
 
   return (
-    <div className="bg-zinc-900/80 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between">
+    <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center text-white font-medium">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-medium">
           {profile.display_name?.[0]?.toUpperCase() || profile.email[0].toUpperCase()}
         </div>
         <div>
           <div className="font-medium text-white">
             {profile.display_name || profile.email.split('@')[0]}
           </div>
-          <div className="text-xs text-emerald-400">Wants to connect</div>
+          <div className="text-xs text-emerald-400">Wants to connect with you</div>
         </div>
       </div>
       <div className="flex gap-2">
         <button
           onClick={onReject}
-          className="p-2 text-zinc-400 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+          title="Decline"
         >
           <X size={18} />
         </button>
         <button
           onClick={onAccept}
-          className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800 rounded-lg transition-colors"
+          className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors"
+          title="Accept"
         >
           <Check size={18} />
         </button>
