@@ -70,36 +70,36 @@ export default function AuthModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-md"
         onClick={() => setShowAuthModal(false)}
       />
-      <div className="relative bg-[var(--card-bg)] rounded-2xl p-8 w-full max-w-md mx-4 border border-[var(--card-border)] shadow-2xl backdrop-blur">
+      <div className="relative glass-card p-6 w-full max-w-sm animate-slideUp">
         <button
           onClick={() => setShowAuthModal(false)}
-          className="absolute top-4 right-4 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+          className="absolute top-4 right-4 pill-button p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
         >
-          <X size={20} />
+          <X size={18} />
         </button>
 
-        <h2 className="text-2xl font-bold text-[var(--foreground)] mb-2">
+        <h2 className="text-lg font-bold text-[var(--foreground)] mb-1">
           {isSignUp ? 'Create Account' : 'Welcome Back'}
         </h2>
-        <p className="text-[var(--muted)] mb-6">
+        <p className="text-[var(--muted)] text-sm mb-5">
           {isSignUp
-            ? 'Start tracking your habits with friends'
-            : 'Sign in to continue your progress'}
+            ? 'Start tracking your habits'
+            : 'Sign in to continue'}
         </p>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
             {error}
           </div>
         )}
 
         {message && (
-          <div className="mb-4 p-3 bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-lg text-[var(--accent-text)] text-sm">
+          <div className="mb-4 p-3 bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-xl text-[var(--accent-text)] text-sm">
             {message}
           </div>
         )}
@@ -107,45 +107,45 @@ export default function AuthModal() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
-                Display Name
+              <label className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wide">
+                Name
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={16} />
                 <input
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Your name"
-                  className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+                  className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wide">
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={16} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+                className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--muted)] mb-1.5">
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wide">
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={18} />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" size={16} />
               <input
                 type="password"
                 value={password}
@@ -153,7 +153,7 @@ export default function AuthModal() {
                 placeholder="••••••••"
                 required
                 minLength={6}
-                className="w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg py-2.5 pl-10 pr-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+                className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
               />
             </div>
           </div>
@@ -161,20 +161,20 @@ export default function AuthModal() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[var(--accent-600)] hover:bg-[var(--accent-500)] disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors"
+            className="pill-button w-full bg-[var(--accent-500)] hover:bg-[var(--accent-400)] disabled:opacity-50 text-white font-medium py-2.5 text-sm transition-colors"
           >
             {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-5 text-center">
           <button
             onClick={() => {
               setIsSignUp(!isSignUp)
               setError(null)
               setMessage(null)
             }}
-            className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm"
+            className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-xs"
           >
             {isSignUp
               ? 'Already have an account? Sign in'

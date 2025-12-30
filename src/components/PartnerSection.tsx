@@ -420,19 +420,19 @@ function FriendHabitsSection({
   )
 
   return (
-    <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl overflow-hidden">
+    <div className="glass-card overflow-hidden">
       {/* Friend Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)] bg-[var(--accent-bg)]/30">
+      <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)] flex items-center justify-center text-white font-medium ring-2 ring-[var(--accent-500)]/30">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-white text-sm font-medium shadow-lg shadow-green-500/20">
             {partner.profile.display_name?.[0]?.toUpperCase() ||
               partner.profile.email[0].toUpperCase()}
           </div>
           <div>
-            <div className="font-medium text-[var(--foreground)]">
+            <div className="text-sm font-medium text-[var(--foreground)]">
               {partner.profile.display_name || partner.profile.email.split('@')[0]}
             </div>
-            <div className="text-xs text-[var(--muted-light)]">
+            <div className="text-[10px] text-[var(--muted)]">
               {partner.habits.length === 0
                 ? 'No habits yet'
                 : `${partner.habits.length} habit${partner.habits.length !== 1 ? 's' : ''}`}
@@ -440,43 +440,41 @@ function FriendHabitsSection({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {/* Progress indicator */}
           {partner.habits.length > 0 && (
-            <div className="text-right">
-              <div className="text-lg font-bold text-[var(--accent-text)]">
-                {progress}%
-              </div>
-              <div className="text-xs text-[var(--muted-light)]">
-                this sprint
-              </div>
-            </div>
+            <span
+              className="pill-button px-2 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: 'var(--accent-bg)',
+                color: 'var(--accent-text)'
+              }}
+            >
+              {progress}%
+            </span>
           )}
 
           {/* Remove friend button */}
           <button
             onClick={onRemove}
-            className="p-2 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            className="pill-button p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
             title="Remove friend"
           >
-            <UserMinus size={16} />
+            <UserMinus size={14} />
           </button>
         </div>
       </div>
 
       {/* Friend's Habits */}
-      <div className="p-4">
+      <div className="p-3">
         {partner.habits.length === 0 ? (
-          <div className="text-center py-6">
-            <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-[var(--card-border)] flex items-center justify-center">
-              <Users className="text-[var(--muted-light)]" size={18} />
-            </div>
-            <p className="text-[var(--muted-light)] text-sm">
-              {partner.profile.display_name || 'Your friend'} hasn&apos;t created any habits yet
+          <div className="text-center py-4">
+            <p className="text-[var(--muted)] text-xs">
+              No habits yet
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {partner.habits.map((habit) => (
               <HabitCard
                 key={habit.id}
