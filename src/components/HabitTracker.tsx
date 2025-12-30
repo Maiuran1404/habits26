@@ -163,8 +163,8 @@ export default function HabitTracker() {
       error = result.error
     }
 
-    // Revert on error
-    if (error) {
+    // Revert on error - check if error has actual content (empty object {} is truthy but not a real error)
+    if (error && Object.keys(error).length > 0) {
       console.error('Error updating entry:', error)
       fetchHabits()
     }

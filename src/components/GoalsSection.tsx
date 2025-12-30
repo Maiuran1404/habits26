@@ -175,33 +175,33 @@ export default function GoalsSection() {
   if (!userId) return null
 
   return (
-    <div className="mb-6">
+    <div className="glass-card p-4 overflow-hidden">
       <div className="grid grid-cols-3 gap-3">
         {columns.map((column) => {
           const columnGoals = getGoalsByType(column.type)
           return (
             <div
               key={column.type}
-              className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl overflow-hidden"
+              className="flex flex-col"
             >
               {/* Column Header */}
-              <div className="px-3 py-2 border-b border-[var(--card-border)]">
-                <h3 className="font-semibold text-[var(--foreground)] text-sm">
+              <div className="mb-2">
+                <h3 className="font-semibold text-[var(--foreground)] text-xs">
                   {column.title}
                 </h3>
-                <p className="text-xs text-[var(--muted-light)]">{column.subtitle}</p>
+                <p className="text-[10px] text-[var(--muted)]">{column.subtitle}</p>
               </div>
 
               {/* Goals List */}
-              <div className="p-2 space-y-1.5 min-h-[80px]">
+              <div className="space-y-1.5 min-h-[60px]">
                 {loading ? (
-                  <div className="h-6 bg-[var(--card-border)] rounded animate-pulse" />
+                  <div className="h-5 bg-[var(--card-border)] rounded-full animate-pulse" />
                 ) : (
                   <>
                     {columnGoals.map((goal) => (
                       <div
                         key={goal.id}
-                        className="group flex items-start gap-2 p-1.5 rounded-lg hover:bg-[var(--accent-bg)] transition-colors"
+                        className="group flex items-start gap-1.5 p-1 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
                       >
                         <button
                           onClick={() => handleToggleGoal(goal.id)}
@@ -209,18 +209,18 @@ export default function GoalsSection() {
                         >
                           {goal.completed ? (
                             <CheckCircle2
-                              size={16}
+                              size={14}
                               className="text-[var(--accent-500)]"
                             />
                           ) : (
                             <Circle
-                              size={16}
+                              size={14}
                               className="text-[var(--muted-light)]"
                             />
                           )}
                         </button>
                         <span
-                          className={`flex-1 text-sm leading-tight ${
+                          className={`flex-1 text-xs leading-tight ${
                             goal.completed
                               ? 'text-[var(--muted-light)] line-through'
                               : 'text-[var(--foreground)]'
@@ -230,16 +230,16 @@ export default function GoalsSection() {
                         </span>
                         <button
                           onClick={() => handleDeleteGoal(goal.id)}
-                          className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-500/20 rounded"
+                          className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-500/20 rounded-full"
                         >
-                          <X size={12} className="text-[var(--muted-light)] hover:text-red-400" />
+                          <X size={10} className="text-[var(--muted-light)] hover:text-red-400" />
                         </button>
                       </div>
                     ))}
 
                     {/* Add Goal Input or Button */}
                     {addingTo === column.type ? (
-                      <div className="flex items-center gap-1.5 p-1">
+                      <div className="flex items-center gap-1 p-1">
                         <input
                           type="text"
                           value={newGoalTitle}
@@ -259,21 +259,21 @@ export default function GoalsSection() {
                           }}
                           placeholder="Goal..."
                           autoFocus
-                          className="flex-1 bg-transparent text-sm text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none border-b border-[var(--accent-border)] py-0.5"
+                          className="flex-1 bg-transparent text-xs text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none border-b border-[var(--accent-border)] py-0.5"
                         />
                         <button
                           onClick={() => handleAddGoal(column.type)}
-                          className="p-1 hover:bg-[var(--accent-bg)] rounded"
+                          className="pill-button p-1 hover:bg-[var(--card-bg)]"
                         >
-                          <Plus size={14} className="text-[var(--accent-500)]" />
+                          <Plus size={12} className="text-[var(--accent-500)]" />
                         </button>
                       </div>
                     ) : (
                       <button
                         onClick={() => setAddingTo(column.type)}
-                        className="flex items-center gap-1 text-xs text-[var(--muted-light)] hover:text-[var(--accent-text)] p-1 rounded transition-colors"
+                        className="flex items-center gap-0.5 text-[10px] text-[var(--muted-light)] hover:text-[var(--accent-text)] p-1 rounded-lg transition-colors"
                       >
-                        <Plus size={12} />
+                        <Plus size={10} />
                         Add
                       </button>
                     )}

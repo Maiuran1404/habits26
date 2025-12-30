@@ -236,39 +236,37 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   if (!user) return null
 
   return (
-    <div className="mt-10 pt-8 border-t border-[var(--card-border)]">
+    <div className="mt-6 pt-5 border-t border-[var(--card-border)]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">
-            <Users className="text-[var(--accent-text)]" size={16} />
-          </div>
-          <h2 className="text-lg font-semibold text-[var(--foreground)]">Friends</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Users className="text-[var(--muted)]" size={16} />
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">Friends</h2>
           {partners.length > 0 && (
-            <span className="text-xs text-[var(--muted)] bg-[var(--card-bg)] px-2 py-0.5 rounded-full border border-[var(--card-border)]">
+            <span className="pill-button text-[10px] text-[var(--muted)] bg-[var(--card-bg)] px-2 py-0.5">
               {partners.length}
             </span>
           )}
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 text-sm text-[var(--accent-text)] hover:text-[var(--accent-text-light)] transition-colors bg-[var(--accent-bg)] hover:bg-[var(--accent-bg-hover)] px-3 py-1.5 rounded-lg border border-[var(--accent-border)]"
+          className="pill-button flex items-center gap-1 text-xs text-[var(--accent-text)] hover:text-[var(--accent-text-light)] transition-colors bg-[var(--accent-bg)] hover:bg-[var(--accent-bg-hover)] px-3 py-1.5"
         >
-          <UserPlus size={14} />
-          Add Friend
+          <UserPlus size={12} />
+          Add
         </button>
       </div>
 
       {/* Friends Content */}
       {loading ? (
-        <div className="space-y-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="bg-[var(--card-bg)] rounded-xl p-4 animate-pulse border border-[var(--card-border)]">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--card-border)]" />
+        <div className="space-y-3">
+          {[1].map((i) => (
+            <div key={i} className="glass-card p-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[var(--card-border)]" />
                 <div>
-                  <div className="h-4 w-24 bg-[var(--card-border)] rounded mb-1.5" />
-                  <div className="h-3 w-16 bg-[var(--card-border)] rounded opacity-50" />
+                  <div className="h-4 w-20 bg-[var(--card-border)] rounded-full mb-1" />
+                  <div className="h-3 w-14 bg-[var(--card-border)] rounded-full opacity-50" />
                 </div>
               </div>
             </div>
@@ -276,27 +274,27 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         </div>
       ) : partners.length === 0 ? (
         /* Empty State - No Friends */
-        <div className="text-center py-12 px-4 bg-[var(--card-bg)] rounded-2xl border border-[var(--card-border)]">
-          <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">
-            <Users className="text-[var(--accent-text)]" size={28} />
+        <div className="glass-card p-6 text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[var(--accent-bg)] flex items-center justify-center">
+            <Users className="text-[var(--accent-text)]" size={20} />
           </div>
-          <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
+          <h3 className="text-sm font-semibold text-[var(--foreground)] mb-1">
             Better Together
           </h3>
-          <p className="text-[var(--muted)] text-sm mb-6 max-w-xs mx-auto leading-relaxed">
-            Add friends to see their habit progress alongside yours. Stay motivated and accountable together.
+          <p className="text-[var(--muted)] text-xs mb-4">
+            Add friends to stay motivated together.
           </p>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-5 py-2.5 rounded-xl transition-all hover:scale-105 shadow-lg shadow-green-500/20"
+            className="pill-button inline-flex items-center gap-1.5 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white font-medium px-4 py-2 text-xs shadow-lg shadow-green-500/20"
           >
-            <UserPlus size={16} />
-            Add Your First Friend
+            <UserPlus size={14} />
+            Add Friend
           </button>
         </div>
       ) : (
         /* Friends with Habits */
-        <div className="space-y-6">
+        <div className="space-y-3">
           {partners.map((partner) => (
             <FriendHabitsSection
               key={partner.partnership.id}
@@ -311,37 +309,38 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
       {/* Add Friend Modal - Shows All Users */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-md"
             onClick={() => setShowAddModal(false)}
           />
-          <div className="relative bg-[var(--card-bg)] rounded-2xl p-6 w-full max-w-md mx-4 border border-[var(--card-border)] shadow-2xl backdrop-blur max-h-[80vh] flex flex-col">
+          <div className="relative glass-card p-5 w-full max-w-sm max-h-[70vh] flex flex-col animate-slideUp">
             <button
               onClick={() => setShowAddModal(false)}
-              className="absolute top-4 right-4 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              className="absolute top-4 right-4 pill-button p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">
-              <UserPlus className="text-[var(--accent-text)]" size={22} />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[var(--accent-bg)] flex items-center justify-center">
+                <UserPlus className="text-[var(--accent-text)]" size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--foreground)]">Add Friends</h2>
+                <p className="text-[var(--muted)] text-xs">Tap to add as friend</p>
+              </div>
             </div>
-
-            <h2 className="text-xl font-bold text-[var(--foreground)] text-center mb-1">Add Friends</h2>
-            <p className="text-[var(--muted)] text-sm text-center mb-6">
-              Click on any user to add them as a friend
-            </p>
 
             {/* Users List */}
             <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
               {availableUsers.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="mx-auto text-[var(--muted-light)] mb-3" size={32} />
-                  <p className="text-[var(--muted)]">
+                <div className="text-center py-6">
+                  <Users className="mx-auto text-[var(--muted-light)] mb-2" size={24} />
+                  <p className="text-[var(--muted)] text-sm">
                     {allUsers.length === 0
                       ? 'No other users yet'
-                      : 'You\'re already friends with everyone!'}
+                      : 'You\'re friends with everyone!'}
                   </p>
                 </div>
               ) : (
@@ -350,28 +349,26 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
                     key={profile.id}
                     onClick={() => handleAddFriend(profile.id)}
                     disabled={addingUserId === profile.id}
-                    className="w-full flex items-center justify-between p-3 bg-[var(--background)] hover:bg-[var(--accent-bg)] border border-[var(--card-border)] hover:border-[var(--accent-border)] rounded-xl transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-between p-3 bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] rounded-xl transition-all disabled:opacity-50"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)] flex items-center justify-center text-white font-medium">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-white text-sm font-medium">
                         {profile.display_name?.[0]?.toUpperCase() || profile.email[0].toUpperCase()}
                       </div>
                       <div className="text-left">
-                        <div className="font-medium text-[var(--foreground)]">
+                        <div className="text-sm font-medium text-[var(--foreground)]">
                           {profile.display_name || profile.email.split('@')[0]}
                         </div>
-                        <div className="text-xs text-[var(--muted-light)]">
+                        <div className="text-[10px] text-[var(--muted)]">
                           {profile.email}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {addingUserId === profile.id ? (
-                        <Loader2 size={18} className="animate-spin text-[var(--accent-text)]" />
-                      ) : (
-                        <UserPlus size={18} className="text-[var(--accent-text)]" />
-                      )}
-                    </div>
+                    {addingUserId === profile.id ? (
+                      <Loader2 size={16} className="animate-spin text-[var(--accent-text)]" />
+                    ) : (
+                      <UserPlus size={16} className="text-[var(--accent-text)]" />
+                    )}
                   </button>
                 ))
               )}
@@ -379,20 +376,20 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
             {/* Current Friends in Modal */}
             {partners.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-[var(--card-border)]">
-                <p className="text-xs text-[var(--muted-light)] uppercase tracking-wider mb-2">
-                  Current Friends ({partners.length})
+              <div className="mt-3 pt-3 border-t border-[var(--card-border)]">
+                <p className="text-[10px] text-[var(--muted)] uppercase tracking-wide mb-2">
+                  Friends ({partners.length})
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {partners.map((partner) => (
                     <div
                       key={partner.partnership.id}
-                      className="flex items-center gap-2 px-2 py-1 bg-[var(--accent-bg)] rounded-lg text-sm"
+                      className="pill-button flex items-center gap-1 px-2 py-0.5 bg-[var(--accent-bg)] text-xs"
                     >
                       <span className="text-[var(--foreground)]">
                         {partner.profile.display_name || partner.profile.email.split('@')[0]}
                       </span>
-                      <Check size={14} className="text-[var(--accent-text)]" />
+                      <Check size={10} className="text-[var(--accent-text)]" />
                     </div>
                   ))}
                 </div>
