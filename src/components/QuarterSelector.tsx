@@ -7,6 +7,7 @@ interface QuarterSelectorProps {
   quarter: Quarter
   year: number
   onChange: (quarter: Quarter, year: number) => void
+  compact?: boolean
 }
 
 const quarters: Quarter[] = ['Q1', 'Q2', 'Q3', 'Q4']
@@ -15,6 +16,7 @@ export default function QuarterSelector({
   quarter,
   year,
   onChange,
+  compact = false,
 }: QuarterSelectorProps) {
   const currentIndex = quarters.indexOf(quarter)
 
@@ -42,26 +44,28 @@ export default function QuarterSelector({
   }
 
   return (
-    <div className="glass-card inline-flex items-center gap-1 p-1.5">
+    <div className={`inline-flex items-center gap-0.5 ${compact ? 'bg-[var(--card-bg)] rounded-xl p-1' : 'glass-card p-1.5'}`}>
       <button
         onClick={goToPrevious}
-        className="pill-button p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+        className={`pill-button text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors ${compact ? 'p-1.5' : 'p-2'}`}
       >
-        <ChevronLeft size={18} />
+        <ChevronLeft size={compact ? 16 : 18} />
       </button>
 
-      <div className="text-center px-4 py-1">
-        <div className="text-sm font-semibold text-[var(--foreground)]">
+      <div className={`text-center ${compact ? 'px-2' : 'px-4 py-1'}`}>
+        <div className={`font-semibold text-[var(--foreground)] ${compact ? 'text-xs' : 'text-sm'}`}>
           {quarter} {year}
         </div>
-        <div className="text-[10px] text-[var(--muted)]">{quarterLabels[quarter]}</div>
+        {!compact && (
+          <div className="text-[10px] text-[var(--muted)]">{quarterLabels[quarter]}</div>
+        )}
       </div>
 
       <button
         onClick={goToNext}
-        className="pill-button p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+        className={`pill-button text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors ${compact ? 'p-1.5' : 'p-2'}`}
       >
-        <ChevronRight size={18} />
+        <ChevronRight size={compact ? 16 : 18} />
       </button>
     </div>
   )

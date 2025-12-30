@@ -98,26 +98,28 @@ const HabitCard = memo(function HabitCard({
   }, [habit.entries])
 
   return (
-    <div className="glass-card p-5 transition-all hover:scale-[1.01]">
-      {/* Header: Name + Today Checkbox */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <h3 className="font-semibold text-[var(--foreground)] text-base truncate">
+    <div className="glass-card p-4 transition-all hover:scale-[1.005]">
+      {/* Header: Name + Stats + Today Checkbox */}
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Color indicator */}
+          <div
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: habit.color }}
+          />
+          <h3 className="font-medium text-[var(--foreground)] text-sm truncate">
             {habit.name}
           </h3>
-          {/* Stats Pills */}
-          <div className="flex items-center gap-1.5">
+          {/* Stats Pills - minimal */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             {streak > 0 && (
-              <span className="pill-button px-2 py-0.5 text-[10px] font-medium bg-[var(--accent-bg)] text-[var(--accent-text)]">
-                {streak} day{streak !== 1 ? 's' : ''}
+              <span className="text-[10px] font-medium text-[var(--accent-text)]">
+                {streak}d
               </span>
             )}
             <span
-              className="pill-button px-2 py-0.5 text-[10px] font-medium"
-              style={{
-                backgroundColor: `${habit.color}20`,
-                color: habit.color
-              }}
+              className="text-[10px] font-medium"
+              style={{ color: habit.color }}
             >
               {stats.percentage}%
             </span>
@@ -128,28 +130,27 @@ const HabitCard = memo(function HabitCard({
         {!readonly && (
           <button
             onClick={() => onTodayClick?.(habit.id)}
-            className="flex-shrink-0 ml-2"
+            className="flex-shrink-0"
             title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today as done'}
           >
             <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
                 todayEntry?.status === 'done'
-                  ? 'shadow-lg'
+                  ? ''
                   : todayEntry?.status === 'missed'
                   ? 'bg-red-500/20 border border-red-500/30'
                   : 'bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] border border-[var(--card-border)]'
               }`}
               style={{
                 backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
-                boxShadow: todayEntry?.status === 'done' ? `0 4px 14px ${habit.color}40` : undefined,
               }}
             >
               {todayEntry?.status === 'done' ? (
-                <Check size={18} className="text-white" strokeWidth={2.5} />
+                <Check size={14} className="text-white" strokeWidth={2.5} />
               ) : todayEntry?.status === 'missed' ? (
-                <X size={16} className="text-red-400" />
+                <X size={12} className="text-red-400" />
               ) : (
-                <Circle size={16} className="text-[var(--muted-light)]" />
+                <Circle size={12} className="text-[var(--muted-light)]" />
               )}
             </div>
           </button>
@@ -157,7 +158,7 @@ const HabitCard = memo(function HabitCard({
       </div>
 
       {/* Calendar Grid */}
-      <div className="mb-4">
+      <div className="mb-3">
         <HabitGrid
           entries={habit.entries}
           color={habit.color}
@@ -168,22 +169,22 @@ const HabitCard = memo(function HabitCard({
         />
       </div>
 
-      {/* Edit/Delete Buttons */}
+      {/* Edit/Delete Buttons - More subtle */}
       {!readonly && (
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--card-border)]">
+        <div className="flex items-center justify-end gap-1 pt-2 border-t border-[var(--card-border)]">
           <button
             onClick={() => onEdit?.(habit)}
-            className="pill-button flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+            className="pill-button p-1.5 text-[var(--muted-light)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+            title="Edit habit"
           >
             <Edit2 size={12} />
-            Edit
           </button>
           <button
             onClick={() => onDelete?.(habit.id)}
-            className="pill-button flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+            className="pill-button p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            title="Delete habit"
           >
             <Trash2 size={12} />
-            Delete
           </button>
         </div>
       )}

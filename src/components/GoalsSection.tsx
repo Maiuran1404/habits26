@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Plus, X, Circle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, X, Circle, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, Target } from 'lucide-react'
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -27,6 +27,18 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
   const [addingTo, setAddingTo] = useState<GoalType | null>(null)
   const [newGoalTitle, setNewGoalTitle] = useState('')
   const [weekOffset, setWeekOffset] = useState(0)
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('goals-section-expanded')
+      return saved !== null ? saved === 'true' : true
+    }
+    return true
+  })
+
+  // Save expanded state to localStorage
+  useEffect(() => {
+    localStorage.setItem('goals-section-expanded', String(isExpanded))
+  }, [isExpanded])
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -245,136 +257,165 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
     })
   }
 
+  // Calculate total goals and completed count for summary
+  const totalGoals = goals.length
+  const completedGoals = goals.filter(g => g.completed).length
+
   if (!userId) return null
 
   return (
-    <div className="glass-card p-4 overflow-hidden">
-      <div className="grid grid-cols-3 gap-3">
-        {columns.map((column) => {
-          const columnGoals = getGoalsByType(column.type, column.weekStart)
-          return (
-            <div
-              key={column.type}
-              className="flex flex-col"
-            >
-              {/* Column Header */}
-              <div className="mb-2">
-                <h3 className="font-semibold text-[var(--foreground)] text-xs">
-                  {column.title}
-                </h3>
-                {column.type === 'weekly' ? (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setWeekOffset(prev => prev - 1)}
-                      className="p-0.5 hover:bg-[var(--card-bg)] rounded transition-colors"
-                    >
-                      <ChevronLeft size={12} className="text-[var(--muted)]" />
-                    </button>
-                    <p className="text-[10px] text-[var(--muted)] flex-1 text-center">{column.subtitle}</p>
-                    <button
-                      onClick={() => setWeekOffset(prev => prev + 1)}
-                      className="p-0.5 hover:bg-[var(--card-bg)] rounded transition-colors"
-                    >
-                      <ChevronRight size={12} className="text-[var(--muted)]" />
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-[10px] text-[var(--muted)]">{column.subtitle}</p>
-                )}
-              </div>
+    <div className="glass-card overflow-hidden">
+      {/* Collapsible Header */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-3 hover:bg-[var(--card-bg)] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Target size={14} className="text-[var(--accent-500)]" />
+          <span className="text-sm font-medium text-[var(--foreground)]">Goals</span>
+          {totalGoals > 0 && (
+            <span className="text-xs text-[var(--muted)] px-1.5 py-0.5 bg-[var(--card-bg)] rounded-full">
+              {completedGoals}/{totalGoals}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          size={16}
+          className={`text-[var(--muted)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+        />
+      </button>
 
-              {/* Goals List */}
-              <div className="space-y-1.5 min-h-[60px]">
-                {loading ? (
-                  <div className="h-5 bg-[var(--card-border)] rounded-full animate-pulse" />
-                ) : (
-                  <>
-                    {columnGoals.map((goal) => (
-                      <div
-                        key={goal.id}
-                        className="group flex items-start gap-1.5 p-1 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
-                      >
+      {/* Collapsible Content */}
+      {isExpanded && (
+        <div className="px-3 pb-3 pt-0">
+          <div className="grid grid-cols-3 gap-3">
+            {columns.map((column) => {
+              const columnGoals = getGoalsByType(column.type, column.weekStart)
+              return (
+                <div
+                  key={column.type}
+                  className="flex flex-col"
+                >
+                  {/* Column Header */}
+                  <div className="mb-2">
+                    <h3 className="font-semibold text-[var(--foreground)] text-xs">
+                      {column.title}
+                    </h3>
+                    {column.type === 'weekly' ? (
+                      <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleToggleGoal(goal.id)}
-                          className="flex-shrink-0 mt-0.5"
+                          onClick={() => setWeekOffset(prev => prev - 1)}
+                          className="p-0.5 hover:bg-[var(--card-bg)] rounded transition-colors"
                         >
-                          {goal.completed ? (
-                            <CheckCircle2
-                              size={14}
-                              className="text-[var(--accent-500)]"
-                            />
-                          ) : (
-                            <Circle
-                              size={14}
-                              className="text-[var(--muted-light)]"
-                            />
-                          )}
+                          <ChevronLeft size={12} className="text-[var(--muted)]" />
                         </button>
-                        <span
-                          className={`flex-1 text-xs leading-tight ${
-                            goal.completed
-                              ? 'text-[var(--muted-light)] line-through'
-                              : 'text-[var(--foreground)]'
-                          }`}
-                        >
-                          {goal.title}
-                        </span>
+                        <p className="text-[10px] text-[var(--muted)] flex-1 text-center">{column.subtitle}</p>
                         <button
-                          onClick={() => handleDeleteGoal(goal.id)}
-                          className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-500/20 rounded-full"
+                          onClick={() => setWeekOffset(prev => prev + 1)}
+                          className="p-0.5 hover:bg-[var(--card-bg)] rounded transition-colors"
                         >
-                          <X size={10} className="text-[var(--muted-light)] hover:text-red-400" />
-                        </button>
-                      </div>
-                    ))}
-
-                    {/* Add Goal Input or Button */}
-                    {addingTo === column.type ? (
-                      <div className="flex items-center gap-1 p-1">
-                        <input
-                          type="text"
-                          value={newGoalTitle}
-                          onChange={(e) => setNewGoalTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddGoal(column.type, column.weekStart)
-                            if (e.key === 'Escape') {
-                              setAddingTo(null)
-                              setNewGoalTitle('')
-                            }
-                          }}
-                          onBlur={() => {
-                            if (!newGoalTitle.trim()) {
-                              setAddingTo(null)
-                              setNewGoalTitle('')
-                            }
-                          }}
-                          placeholder="Goal..."
-                          autoFocus
-                          className="flex-1 bg-transparent text-xs text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none border-b border-[var(--accent-border)] py-0.5"
-                        />
-                        <button
-                          onClick={() => handleAddGoal(column.type, column.weekStart)}
-                          className="pill-button p-1 hover:bg-[var(--card-bg)]"
-                        >
-                          <Plus size={12} className="text-[var(--accent-500)]" />
+                          <ChevronRight size={12} className="text-[var(--muted)]" />
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setAddingTo(column.type)}
-                        className="flex items-center gap-0.5 text-[10px] text-[var(--muted-light)] hover:text-[var(--accent-text)] p-1 rounded-lg transition-colors"
-                      >
-                        <Plus size={10} />
-                        Add
-                      </button>
+                      <p className="text-[10px] text-[var(--muted)]">{column.subtitle}</p>
                     )}
-                  </>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+                  </div>
+
+                  {/* Goals List */}
+                  <div className="space-y-1 min-h-[40px]">
+                    {loading ? (
+                      <div className="h-4 bg-[var(--card-border)] rounded-full animate-pulse" />
+                    ) : (
+                      <>
+                        {columnGoals.map((goal) => (
+                          <div
+                            key={goal.id}
+                            className="group flex items-start gap-1.5 p-1 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
+                          >
+                            <button
+                              onClick={() => handleToggleGoal(goal.id)}
+                              className="flex-shrink-0 mt-0.5"
+                            >
+                              {goal.completed ? (
+                                <CheckCircle2
+                                  size={14}
+                                  className="text-[var(--accent-500)]"
+                                />
+                              ) : (
+                                <Circle
+                                  size={14}
+                                  className="text-[var(--muted-light)]"
+                                />
+                              )}
+                            </button>
+                            <span
+                              className={`flex-1 text-xs leading-tight ${
+                                goal.completed
+                                  ? 'text-[var(--muted-light)] line-through'
+                                  : 'text-[var(--foreground)]'
+                              }`}
+                            >
+                              {goal.title}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteGoal(goal.id)}
+                              className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-500/20 rounded-full"
+                            >
+                              <X size={10} className="text-[var(--muted-light)] hover:text-red-400" />
+                            </button>
+                          </div>
+                        ))}
+
+                        {/* Add Goal Input or Button */}
+                        {addingTo === column.type ? (
+                          <div className="flex items-center gap-1 p-1">
+                            <input
+                              type="text"
+                              value={newGoalTitle}
+                              onChange={(e) => setNewGoalTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleAddGoal(column.type, column.weekStart)
+                                if (e.key === 'Escape') {
+                                  setAddingTo(null)
+                                  setNewGoalTitle('')
+                                }
+                              }}
+                              onBlur={() => {
+                                if (!newGoalTitle.trim()) {
+                                  setAddingTo(null)
+                                  setNewGoalTitle('')
+                                }
+                              }}
+                              placeholder="Goal..."
+                              autoFocus
+                              className="flex-1 bg-transparent text-xs text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none border-b border-[var(--accent-border)] py-0.5"
+                            />
+                            <button
+                              onClick={() => handleAddGoal(column.type, column.weekStart)}
+                              className="pill-button p-1 hover:bg-[var(--card-bg)]"
+                            >
+                              <Plus size={12} className="text-[var(--accent-500)]" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setAddingTo(column.type)}
+                            className="flex items-center gap-0.5 text-[10px] text-[var(--muted-light)] hover:text-[var(--accent-text)] p-1 rounded-lg transition-colors"
+                          >
+                            <Plus size={10} />
+                            Add
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

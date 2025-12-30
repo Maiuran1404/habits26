@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
-import { Users, UserPlus, X, Check, Loader2, UserMinus } from 'lucide-react'
+import { Users, UserPlus, X, Check, Loader2, UserMinus, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Profile, HabitWithEntries, Quarter, Partnership, getQuarterDates } from '@/types/database'
@@ -231,77 +231,87 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
     return allUsers.filter(u => !friendIds.has(u.id))
   }, [allUsers, friendIds])
 
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('friends-section-expanded')
+      return saved !== null ? saved === 'true' : true
+    }
+    return true
+  })
+
+  // Save expanded state
+  useEffect(() => {
+    localStorage.setItem('friends-section-expanded', String(isExpanded))
+  }, [isExpanded])
+
   if (!user) return null
 
   return (
-    <div className="mt-6 pt-5 border-t border-[var(--card-border)]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Users className="text-[var(--muted)]" size={16} />
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">Friends</h2>
+    <div className="glass-card overflow-hidden">
+      {/* Collapsible Header */}
+      <div className="flex items-center justify-between p-3">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex items-center gap-2 flex-1"
+        >
+          <Users size={14} className="text-[var(--accent-500)]" />
+          <span className="text-sm font-medium text-[var(--foreground)]">Friends</span>
           {partners.length > 0 && (
-            <span className="pill-button text-[10px] text-[var(--muted)] bg-[var(--card-bg)] px-2 py-0.5">
+            <span className="text-xs text-[var(--muted)] px-1.5 py-0.5 bg-[var(--card-bg)] rounded-full">
               {partners.length}
             </span>
           )}
-        </div>
+          <ChevronDown
+            size={16}
+            className={`text-[var(--muted)] transition-transform ml-auto ${isExpanded ? 'rotate-180' : ''}`}
+          />
+        </button>
         <button
           onClick={() => setShowAddModal(true)}
-          className="pill-button flex items-center gap-1 text-xs text-[var(--accent-text)] hover:text-[var(--accent-text-light)] transition-colors bg-[var(--accent-bg)] hover:bg-[var(--accent-bg-hover)] px-3 py-1.5"
+          className="pill-button flex items-center gap-1 text-xs text-[var(--accent-text)] hover:text-[var(--accent-text-light)] transition-colors bg-[var(--accent-bg)] hover:bg-[var(--accent-bg-hover)] px-2 py-1 ml-2"
         >
           <UserPlus size={12} />
-          Add
         </button>
       </div>
 
-      {/* Friends Content */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1].map((i) => (
-            <div key={i} className="glass-card p-4 animate-pulse">
+      {/* Collapsible Content */}
+      {isExpanded && (
+        <div className="px-3 pb-3">
+          {/* Friends Content */}
+          {loading ? (
+            <div className="p-3 animate-pulse">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[var(--card-border)]" />
-                <div>
-                  <div className="h-4 w-20 bg-[var(--card-border)] rounded-full mb-1" />
-                  <div className="h-3 w-14 bg-[var(--card-border)] rounded-full opacity-50" />
-                </div>
+                <div className="w-8 h-8 rounded-lg bg-[var(--card-border)]" />
+                <div className="h-3 w-20 bg-[var(--card-border)] rounded-full" />
               </div>
             </div>
-          ))}
-        </div>
-      ) : partners.length === 0 ? (
-        /* Empty State - No Friends */
-        <div className="glass-card p-6 text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[var(--accent-bg)] flex items-center justify-center">
-            <Users className="text-[var(--accent-text)]" size={20} />
-          </div>
-          <h3 className="text-sm font-semibold text-[var(--foreground)] mb-1">
-            Better Together
-          </h3>
-          <p className="text-[var(--muted)] text-xs mb-4">
-            Add friends to stay motivated together.
-          </p>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="pill-button inline-flex items-center gap-1.5 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white font-medium px-4 py-2 text-xs shadow-lg shadow-green-500/20"
-          >
-            <UserPlus size={14} />
-            Add Friend
-          </button>
-        </div>
-      ) : (
-        /* Friends with Habits */
-        <div className="space-y-3">
-          {partners.map((partner) => (
-            <FriendHabitsSection
-              key={partner.partnership.id}
-              partner={partner}
-              quarter={quarter}
-              year={year}
-              onRemove={() => handleRemoveFriend(partner.partnership.id)}
-            />
-          ))}
+          ) : partners.length === 0 ? (
+            /* Empty State - Compact */
+            <div className="text-center py-4">
+              <Users className="mx-auto text-[var(--muted-light)] mb-2" size={24} />
+              <p className="text-[var(--muted)] text-xs mb-2">Add friends to stay motivated</p>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="pill-button inline-flex items-center gap-1.5 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white font-medium px-3 py-1.5 text-xs"
+              >
+                <UserPlus size={12} />
+                Add Friend
+              </button>
+            </div>
+          ) : (
+            /* Friends with Habits - Compact List */
+            <div className="space-y-2">
+              {partners.map((partner) => (
+                <FriendHabitsSection
+                  key={partner.partnership.id}
+                  partner={partner}
+                  quarter={quarter}
+                  year={year}
+                  onRemove={() => handleRemoveFriend(partner.partnership.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -400,7 +410,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   )
 }
 
-/* Friend Habits Section - Memoized to prevent unnecessary re-renders */
+/* Friend Habits Section - Memoized and Collapsible */
 const FriendHabitsSection = memo(function FriendHabitsSection({
   partner,
   quarter,
@@ -412,67 +422,50 @@ const FriendHabitsSection = memo(function FriendHabitsSection({
   year: number
   onRemove: () => void
 }) {
+  const [isOpen, setIsOpen] = useState(false)
   const progress = useMemo(
     () => calculatePartnerProgress(partner.habits, year, quarter),
     [partner.habits, year, quarter]
   )
 
   return (
-    <div className="glass-card overflow-hidden">
-      {/* Friend Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--card-border)]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-white text-sm font-medium shadow-lg shadow-green-500/20">
+    <div className="bg-[var(--card-bg)] rounded-xl overflow-hidden">
+      {/* Friend Header - Clickable to expand */}
+      <div className="flex items-center justify-between p-2">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 flex-1 min-w-0"
+        >
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
             {partner.profile.display_name?.[0]?.toUpperCase() ||
               partner.profile.email[0].toUpperCase()}
           </div>
-          <div>
-            <div className="text-sm font-medium text-[var(--foreground)]">
-              {partner.profile.display_name || partner.profile.email.split('@')[0]}
-            </div>
-            <div className="text-[10px] text-[var(--muted)]">
-              {partner.habits.length === 0
-                ? 'No habits yet'
-                : `${partner.habits.length} habit${partner.habits.length !== 1 ? 's' : ''}`}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Progress indicator */}
+          <span className="text-sm font-medium text-[var(--foreground)] truncate">
+            {partner.profile.display_name || partner.profile.email.split('@')[0]}
+          </span>
           {partner.habits.length > 0 && (
-            <span
-              className="pill-button px-2 py-0.5 text-[10px] font-medium"
-              style={{
-                backgroundColor: 'var(--accent-bg)',
-                color: 'var(--accent-text)'
-              }}
-            >
+            <span className="text-[10px] font-medium text-[var(--accent-text)] flex-shrink-0">
               {progress}%
             </span>
           )}
-
-          {/* Remove friend button */}
-          <button
-            onClick={onRemove}
-            className="pill-button p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Remove friend"
-          >
-            <UserMinus size={14} />
-          </button>
-        </div>
+          <ChevronDown
+            size={14}
+            className={`text-[var(--muted-light)] transition-transform ml-auto flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <button
+          onClick={onRemove}
+          className="pill-button p-1 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors ml-1 flex-shrink-0"
+          title="Remove friend"
+        >
+          <UserMinus size={12} />
+        </button>
       </div>
 
-      {/* Friend's Habits */}
-      <div className="p-3">
-        {partner.habits.length === 0 ? (
-          <div className="text-center py-4">
-            <p className="text-[var(--muted)] text-xs">
-              No habits yet
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
+      {/* Friend's Habits - Collapsible */}
+      {isOpen && partner.habits.length > 0 && (
+        <div className="px-2 pb-2 pt-1 border-t border-[var(--card-border)]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {partner.habits.map((habit) => (
               <HabitCard
                 key={habit.id}
@@ -483,8 +476,8 @@ const FriendHabitsSection = memo(function FriendHabitsSection({
               />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 })

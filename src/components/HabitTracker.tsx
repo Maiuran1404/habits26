@@ -274,20 +274,64 @@ export default function HabitTracker() {
   }, [])
 
   return (
-    <div className="min-h-[100dvh] bg-[var(--background)] flex flex-col items-center justify-start py-8 px-4">
-      {/* Main Container - Centered Glass Card */}
-      <div className="w-full max-w-[28rem]">
-        {/* Header */}
-        <div className="glass-card p-5 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center shadow-lg shadow-green-500/20">
-                <Target size={20} className="text-white" />
+    <div className="min-h-[100dvh] bg-[var(--background)] flex flex-col items-center justify-start py-4 lg:py-6 px-4">
+      {/* Main Container */}
+      <div className="w-full max-w-[28rem] lg:max-w-5xl">
+        {/* Header - Clean & Compact */}
+        <div className="glass-card p-4 mb-4">
+          <div className="flex items-center justify-between gap-4">
+            {/* Left: Logo + Title + Quarter */}
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center flex-shrink-0">
+                <Target size={18} className="text-white" />
               </div>
-              <h1 className="text-xl font-bold text-[var(--foreground)]">Habits</h1>
+              <div className="hidden lg:block">
+                <QuarterSelector
+                  quarter={quarter}
+                  year={year}
+                  onChange={handleQuarterChange}
+                  compact
+                />
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Center: Mantra (desktop only) */}
+            {user && mantra && (
+              <div className="hidden lg:flex flex-1 justify-center min-w-0 group">
+                {isEditingMantra ? (
+                  <input
+                    type="text"
+                    value={mantra}
+                    onChange={(e) => handleMantraChange(e.target.value)}
+                    placeholder="Your mantra..."
+                    autoFocus
+                    className="w-full max-w-md bg-transparent text-center text-sm text-[var(--muted)] placeholder-[var(--muted-light)] focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setIsEditingMantra(false)
+                      if (e.key === 'Escape') setIsEditingMantra(false)
+                    }}
+                    onBlur={() => setIsEditingMantra(false)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2 max-w-md">
+                    <p className="text-sm text-[var(--muted)] italic truncate">
+                      &ldquo;{mantra}&rdquo;
+                    </p>
+                    {!isMantraLocked && (
+                      <button
+                        onClick={() => setIsEditingMantra(true)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[var(--card-bg)] rounded-full flex-shrink-0"
+                      >
+                        <Pencil size={12} className="text-[var(--muted-light)]" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {user ? (
                 <>
                   <button
@@ -295,15 +339,15 @@ export default function HabitTracker() {
                       setEditingHabit(null)
                       setShowHabitModal(true)
                     }}
-                    className="pill-button flex items-center gap-1.5 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white text-sm font-medium px-4 py-2"
+                    className="pill-button flex items-center gap-1.5 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white text-sm font-medium px-3 py-2"
                   >
                     <Plus size={16} />
-                    Add
+                    <span className="hidden sm:inline">Add</span>
                   </button>
                   <div className="relative">
                     <button
                       onClick={() => setShowSettings(!showSettings)}
-                      className="pill-button p-2.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+                      className="pill-button p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
                     >
                       <Settings size={18} />
                     </button>
@@ -320,6 +364,16 @@ export default function HabitTracker() {
                             </p>
                             <p className="text-xs text-[var(--muted-light)]">{user.email}</p>
                           </div>
+                          {/* Mantra lock toggle in settings */}
+                          {mantra && (
+                            <button
+                              onClick={toggleMantraLock}
+                              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] transition-colors"
+                            >
+                              {isMantraLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                              {isMantraLocked ? 'Unlock Mantra' : 'Lock Mantra'}
+                            </button>
+                          )}
                           <ThemeToggle />
                           <button
                             onClick={() => {
@@ -339,7 +393,7 @@ export default function HabitTracker() {
               ) : (
                 <button
                   onClick={() => setShowAuthModal(true)}
-                  className="pill-button bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white text-sm font-medium px-5 py-2"
+                  className="pill-button bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white text-sm font-medium px-4 py-2"
                 >
                   Sign In
                 </button>
@@ -348,56 +402,39 @@ export default function HabitTracker() {
           </div>
         </div>
 
-        {/* Content Area */}
-        <main className="space-y-4">
-        {/* Mantra Section */}
+        {/* Mobile: Quarter Selector */}
+        <div className="flex justify-center mb-4 lg:hidden">
+          <QuarterSelector
+            quarter={quarter}
+            year={year}
+            onChange={handleQuarterChange}
+          />
+        </div>
+
+        {/* Mobile: Mantra */}
         {user && mantra && (
-          <div className="glass-card p-4 group relative">
+          <div className="lg:hidden glass-card p-3 mb-4 group relative">
             {isEditingMantra ? (
-              <div className="relative">
-                <textarea
-                  value={mantra}
-                  onChange={(e) => handleMantraChange(e.target.value)}
-                  placeholder="Write your mantra..."
-                  autoFocus
-                  className="w-full bg-transparent text-center text-base font-medium text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none resize-none"
-                  rows={2}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      setIsEditingMantra(false)
-                    }
-                    if (e.key === 'Escape') {
-                      setIsEditingMantra(false)
-                    }
-                  }}
-                  onBlur={() => setIsEditingMantra(false)}
-                />
-              </div>
+              <input
+                type="text"
+                value={mantra}
+                onChange={(e) => handleMantraChange(e.target.value)}
+                placeholder="Your mantra..."
+                autoFocus
+                className="w-full bg-transparent text-center text-sm text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') setIsEditingMantra(false)
+                  if (e.key === 'Escape') setIsEditingMantra(false)
+                }}
+                onBlur={() => setIsEditingMantra(false)}
+              />
             ) : (
-              <>
-                <p className="text-center text-base font-medium text-[var(--foreground)] italic">
-                  &ldquo;{mantra}&rdquo;
-                </p>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!isMantraLocked && (
-                    <button
-                      onClick={() => setIsEditingMantra(true)}
-                      className="pill-button p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)]"
-                      title="Edit mantra"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  )}
-                  <button
-                    onClick={toggleMantraLock}
-                    className="pill-button p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)]"
-                    title={isMantraLocked ? 'Unlock to edit' : 'Lock mantra'}
-                  >
-                    {isMantraLocked ? <Lock size={14} /> : <Unlock size={14} />}
-                  </button>
-                </div>
-              </>
+              <p
+                onClick={() => !isMantraLocked && setIsEditingMantra(true)}
+                className={`text-center text-sm text-[var(--muted)] italic ${!isMantraLocked ? 'cursor-pointer' : ''}`}
+              >
+                &ldquo;{mantra}&rdquo;
+              </p>
             )}
           </div>
         )}
@@ -408,45 +445,18 @@ export default function HabitTracker() {
             onClick={() => {
               setIsMantraLocked(false)
               setIsEditingMantra(true)
-              setMantra('')
+              setMantra(' ')
             }}
-            className="glass-card w-full p-4 text-center text-[var(--muted)] hover:text-[var(--accent-text)] transition-colors"
+            className="w-full text-center text-xs text-[var(--muted-light)] hover:text-[var(--accent-text)] transition-colors mb-4 py-2"
           >
-            + Add your mantra
+            + Add mantra
           </button>
         )}
 
-        {/* Goals Section */}
+        {/* Content Area */}
+        <main className="space-y-4">
+        {/* Goals Section - Collapsible on desktop */}
         {user && <GoalsSection quarter={quarter} year={year} />}
-
-        {/* User Profile Section */}
-        {!authLoading && user && profile && (
-          <div className="glass-card p-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-xl text-white font-semibold shadow-lg shadow-green-500/20">
-                {profile.display_name?.[0]?.toUpperCase() ||
-                  profile.email[0].toUpperCase()}
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-[var(--foreground)]">
-                  {profile.display_name || profile.email.split('@')[0]}
-                </h2>
-                <p className="text-[var(--muted)] text-sm">
-                  {habits.length} habit{habits.length !== 1 ? 's' : ''} this quarter
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quarter Selector */}
-        <div className="flex justify-center">
-          <QuarterSelector
-            quarter={quarter}
-            year={year}
-            onChange={handleQuarterChange}
-          />
-        </div>
 
         {/* Habits List */}
         {authLoading ? (
@@ -549,8 +559,8 @@ export default function HabitTracker() {
             </div>
           </div>
         ) : (
-          // Habits list
-          <div className="space-y-3">
+          // Habits list - responsive grid
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {habits.map((habit) => (
               <HabitCard
                 key={habit.id}
