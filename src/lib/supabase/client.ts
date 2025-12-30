@@ -9,7 +9,14 @@ const createChainableMock = (finalValue: any = { data: [], error: null }) => {
     get: (target, prop) => {
       // Terminal methods that return promises
       if (prop === 'single') return async () => ({ data: null, error: null })
-      if (prop === 'then') return finalValue.then?.bind(finalValue)
+      // Make the mock properly thenable so await works
+      if (prop === 'then') {
+        return (resolve: (value: any) => void) => {
+          // Resolve immediately with the final value
+          resolve(finalValue)
+          return Promise.resolve(finalValue)
+        }
+      }
       // Data access
       if (prop === 'data') return finalValue.data
       if (prop === 'error') return finalValue.error

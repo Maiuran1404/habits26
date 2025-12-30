@@ -72,7 +72,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       console.warn('Partners fetch timed out')
       setPartners([])
       setLoading(false)
-    }, 5000)
+    }, 3000)
 
     try {
       // Get all partnerships (accepted)

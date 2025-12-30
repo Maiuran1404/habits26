@@ -97,61 +97,62 @@ export default function HabitCard({
   }, [habit.entries])
 
   return (
-    <div className="bg-[var(--card-bg)] backdrop-blur rounded-xl p-4 sm:p-5 border border-[var(--card-border)] hover:border-[var(--card-hover-border)] transition-colors">
-      {/* Header: Name + Large Checkbox */}
-      <div className="flex items-start justify-between mb-3">
-        <h3 className="font-semibold text-[var(--foreground)] text-lg truncate flex-1">
-          {habit.name}
-        </h3>
+    <div className="glass-card p-5 transition-all hover:scale-[1.01]">
+      {/* Header: Name + Today Checkbox */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <h3 className="font-semibold text-[var(--foreground)] text-base truncate">
+            {habit.name}
+          </h3>
+          {/* Stats Pills */}
+          <div className="flex items-center gap-1.5">
+            {streak > 0 && (
+              <span className="pill-button px-2 py-0.5 text-[10px] font-medium bg-[var(--accent-bg)] text-[var(--accent-text)]">
+                {streak} day{streak !== 1 ? 's' : ''}
+              </span>
+            )}
+            <span
+              className="pill-button px-2 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: `${habit.color}20`,
+                color: habit.color
+              }}
+            >
+              {stats.percentage}%
+            </span>
+          </div>
+        </div>
 
-        {/* Large Today Checkbox - Top Right */}
+        {/* Today Checkbox */}
         {!readonly && (
           <button
             onClick={() => onTodayClick?.(habit.id)}
-            className="flex-shrink-0 ml-3"
+            className="flex-shrink-0 ml-2"
             title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today as done'}
           >
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
                 todayEntry?.status === 'done'
-                  ? 'shadow-md'
+                  ? 'shadow-lg'
                   : todayEntry?.status === 'missed'
                   ? 'bg-red-500/20 border border-red-500/30'
-                  : 'bg-[var(--card-border)]/50 hover:bg-[var(--card-border)] border border-[var(--card-border)]'
+                  : 'bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] border border-[var(--card-border)]'
               }`}
               style={{
                 backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
+                boxShadow: todayEntry?.status === 'done' ? `0 4px 14px ${habit.color}40` : undefined,
               }}
             >
               {todayEntry?.status === 'done' ? (
-                <Check size={18} className="text-white" />
+                <Check size={18} className="text-white" strokeWidth={2.5} />
               ) : todayEntry?.status === 'missed' ? (
                 <X size={16} className="text-red-400" />
               ) : (
-                <Check size={16} className="text-[var(--muted-light)]" />
+                <Circle size={16} className="text-[var(--muted-light)]" />
               )}
             </div>
           </button>
         )}
-      </div>
-
-      {/* Stats Badges Row */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[var(--card-border)]/50 text-[var(--muted)]">
-          Streak: {streak}
-        </span>
-        <span
-          className="px-2 py-0.5 text-xs font-medium rounded-md"
-          style={{
-            backgroundColor: `${habit.color}20`,
-            color: habit.color
-          }}
-        >
-          {stats.percentage}%
-        </span>
-        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[var(--card-border)]/50 text-[var(--muted)]">
-          {stats.completed} check-ins
-        </span>
       </div>
 
       {/* Calendar Grid */}
@@ -166,21 +167,21 @@ export default function HabitCard({
         />
       </div>
 
-      {/* Edit/Delete Buttons - Bottom */}
+      {/* Edit/Delete Buttons */}
       {!readonly && (
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--card-border)]/50">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--card-border)]">
           <button
             onClick={() => onEdit?.(habit)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors border border-[var(--card-border)]"
+            className="pill-button flex items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
           >
-            <Edit2 size={14} />
+            <Edit2 size={12} />
             Edit
           </button>
           <button
             onClick={() => onDelete?.(habit.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors border border-red-500/30"
+            className="pill-button flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
           >
-            <Trash2 size={14} />
+            <Trash2 size={12} />
             Delete
           </button>
         </div>

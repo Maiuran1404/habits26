@@ -62,12 +62,12 @@ export default function HabitTracker() {
 
     setLoading(true)
 
-    // Timeout safety net - don't hang forever (5 seconds)
+    // Timeout safety net - don't hang forever (3 seconds)
     const timeout = setTimeout(() => {
       console.warn('Habits fetch timed out - check if database tables exist')
       setHabits([])
       setLoading(false)
-    }, 5000)
+    }, 3000)
 
     try {
       const { data, error } = await supabase
@@ -263,82 +263,85 @@ export default function HabitTracker() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-lg border-b border-[var(--card-border)]">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center">
-              <Target size={18} className="text-white" />
+    <div className="min-h-[100dvh] bg-[var(--background)] flex flex-col items-center justify-start py-8 px-4">
+      {/* Main Container - Centered Glass Card */}
+      <div className="w-full max-w-[28rem]">
+        {/* Header */}
+        <div className="glass-card p-5 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center shadow-lg shadow-green-500/20">
+                <Target size={20} className="text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-[var(--foreground)]">Habits</h1>
             </div>
-            <h1 className="text-xl font-bold text-[var(--foreground)]">Habits</h1>
-          </div>
 
-          <div className="flex items-center gap-2">
-            {user ? (
-              <>
-                <button
-                  onClick={() => {
-                    setEditingHabit(null)
-                    setShowHabitModal(true)
-                  }}
-                  className="flex items-center gap-1.5 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <Plus size={16} />
-                  Create
-                </button>
-                <div className="relative">
+            <div className="flex items-center gap-2">
+              {user ? (
+                <>
                   <button
-                    onClick={() => setShowSettings(!showSettings)}
-                    className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
+                    onClick={() => {
+                      setEditingHabit(null)
+                      setShowHabitModal(true)
+                    }}
+                    className="pill-button flex items-center gap-1.5 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white text-sm font-medium px-4 py-2"
                   >
-                    <Settings size={18} />
+                    <Plus size={16} />
+                    Add
                   </button>
-                  {showSettings && (
-                    <>
-                      <div
-                        className="fixed inset-0"
-                        onClick={() => setShowSettings(false)}
-                      />
-                      <div className="absolute right-0 top-full mt-2 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-lg shadow-xl overflow-hidden min-w-[180px] backdrop-blur">
-                        <div className="px-4 py-3 border-b border-[var(--card-border)]">
-                          <p className="text-sm font-medium text-[var(--foreground)]">
-                            {profile?.display_name || user.email?.split('@')[0]}
-                          </p>
-                          <p className="text-xs text-[var(--muted-light)]">{user.email}</p>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowSettings(!showSettings)}
+                      className="pill-button p-2.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+                    >
+                      <Settings size={18} />
+                    </button>
+                    {showSettings && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setShowSettings(false)}
+                        />
+                        <div className="absolute right-0 top-full mt-2 z-50 glass-card overflow-hidden min-w-[200px]">
+                          <div className="px-4 py-3 border-b border-[var(--card-border)]">
+                            <p className="text-sm font-medium text-[var(--foreground)]">
+                              {profile?.display_name || user.email?.split('@')[0]}
+                            </p>
+                            <p className="text-xs text-[var(--muted-light)]">{user.email}</p>
+                          </div>
+                          <ThemeToggle />
+                          <button
+                            onClick={() => {
+                              signOut()
+                              setShowSettings(false)
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] transition-colors border-t border-[var(--card-border)]"
+                          >
+                            <LogOut size={16} />
+                            Sign Out
+                          </button>
                         </div>
-                        <ThemeToggle />
-                        <button
-                          onClick={() => {
-                            signOut()
-                            setShowSettings(false)
-                          }}
-                          className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] transition-colors border-t border-[var(--card-border)]"
-                        >
-                          <LogOut size={16} />
-                          Sign Out
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors"
-              >
-                Sign In
-              </button>
-            )}
+                      </>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="pill-button bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white text-sm font-medium px-5 py-2"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* Content Area */}
+        <main className="space-y-4">
         {/* Mantra Section */}
-        {user && (
-          <div className="mb-6">
+        {user && mantra && (
+          <div className="glass-card p-4 group relative">
             {isEditingMantra ? (
               <div className="relative">
                 <textarea
@@ -346,7 +349,7 @@ export default function HabitTracker() {
                   onChange={(e) => handleMantraChange(e.target.value)}
                   placeholder="Write your mantra..."
                   autoFocus
-                  className="w-full bg-[var(--card-bg)] border border-[var(--accent-border)] rounded-xl p-4 text-center text-lg font-semibold text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] resize-none"
+                  className="w-full bg-transparent text-center text-base font-medium text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none resize-none"
                   rows={2}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -359,20 +362,17 @@ export default function HabitTracker() {
                   }}
                   onBlur={() => setIsEditingMantra(false)}
                 />
-                <p className="text-xs text-[var(--muted-light)] text-center mt-1">
-                  Press Enter to save, Escape to cancel
-                </p>
               </div>
-            ) : mantra ? (
-              <div className="group relative bg-gradient-to-r from-[var(--accent-bg)] to-transparent border border-[var(--accent-border)] rounded-xl p-4">
-                <p className="text-center text-lg font-bold text-[var(--foreground)] italic">
+            ) : (
+              <>
+                <p className="text-center text-base font-medium text-[var(--foreground)] italic">
                   &ldquo;{mantra}&rdquo;
                 </p>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!isMantraLocked && (
                     <button
                       onClick={() => setIsEditingMantra(true)}
-                      className="p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] rounded-lg transition-colors"
+                      className="pill-button p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)]"
                       title="Edit mantra"
                     >
                       <Pencil size={14} />
@@ -380,25 +380,29 @@ export default function HabitTracker() {
                   )}
                   <button
                     onClick={toggleMantraLock}
-                    className="p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] rounded-lg transition-colors"
+                    className="pill-button p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)]"
                     title={isMantraLocked ? 'Unlock to edit' : 'Lock mantra'}
                   >
                     {isMantraLocked ? <Lock size={14} /> : <Unlock size={14} />}
                   </button>
                 </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setIsMantraLocked(false)
-                  setIsEditingMantra(true)
-                }}
-                className="w-full border border-dashed border-[var(--card-border)] hover:border-[var(--accent-border)] rounded-xl p-4 text-[var(--muted)] hover:text-[var(--accent-text)] transition-colors"
-              >
-                + Add your mantra
-              </button>
+              </>
             )}
           </div>
+        )}
+
+        {/* Add mantra button when no mantra exists */}
+        {user && !mantra && (
+          <button
+            onClick={() => {
+              setIsMantraLocked(false)
+              setIsEditingMantra(true)
+              setMantra('')
+            }}
+            className="glass-card w-full p-4 text-center text-[var(--muted)] hover:text-[var(--accent-text)] transition-colors"
+          >
+            + Add your mantra
+          </button>
         )}
 
         {/* Goals Section */}
@@ -406,18 +410,18 @@ export default function HabitTracker() {
 
         {/* User Profile Section */}
         {!authLoading && user && profile && (
-          <div className="mb-6">
+          <div className="glass-card p-5">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-700)] flex items-center justify-center text-2xl text-white font-medium ring-2 ring-[var(--accent-500)]">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-xl text-white font-semibold shadow-lg shadow-green-500/20">
                 {profile.display_name?.[0]?.toUpperCase() ||
                   profile.email[0].toUpperCase()}
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-[var(--foreground)]">
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-[var(--foreground)]">
                   {profile.display_name || profile.email.split('@')[0]}
                 </h2>
-                <p className="text-[var(--muted-light)] text-sm">
-                  {habits.length} habit{habits.length !== 1 ? 's' : ''} this sprint
+                <p className="text-[var(--muted)] text-sm">
+                  {habits.length} habit{habits.length !== 1 ? 's' : ''} this quarter
                 </p>
               </div>
             </div>
@@ -425,7 +429,7 @@ export default function HabitTracker() {
         )}
 
         {/* Quarter Selector */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center">
           <QuarterSelector
             quarter={quarter}
             year={year}
@@ -438,115 +442,97 @@ export default function HabitTracker() {
 
         {/* Habits List */}
         {authLoading ? (
-          // Auth loading state - checking session
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[var(--card-bg)] rounded-xl p-5 animate-pulse border border-[var(--card-border)]">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="h-5 w-32 bg-[var(--card-border)] rounded mb-2" />
-                    <div className="h-3 w-48 bg-[var(--card-border)] rounded opacity-50" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="grid grid-cols-7 gap-1">
-                    {[...Array(28)].map((_, j) => (
-                      <div key={j} className="w-3 h-3 bg-[var(--card-border)] rounded-sm opacity-50" />
-                    ))}
-                  </div>
+          // Auth loading state
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="glass-card p-5 animate-pulse">
+                <div className="h-5 w-28 bg-[var(--card-border)] rounded-full mb-3" />
+                <div className="grid grid-cols-7 gap-1">
+                  {[...Array(21)].map((_, j) => (
+                    <div key={j} className="w-3 h-3 bg-[var(--card-border)] rounded-sm opacity-50" />
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         ) : !user ? (
           // Not logged in - Welcome state
-          <div className="text-center py-20">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-[var(--accent-bg)] flex items-center justify-center border border-[var(--accent-border)]">
-              <div className="grid grid-cols-4 gap-1">
-                {[...Array(16)].map((_, i) => (
+          <div className="glass-card p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center shadow-lg shadow-green-500/20">
+              <div className="grid grid-cols-3 gap-0.5">
+                {[...Array(9)].map((_, i) => (
                   <div
                     key={i}
-                    className="w-2.5 h-2.5 rounded-sm transition-colors"
+                    className="w-2 h-2 rounded-sm"
                     style={{
-                      backgroundColor: [0, 5, 6, 9, 10, 15].includes(i) ? 'var(--accent-500)' : 'var(--card-border)',
-                      opacity: [0, 5, 6, 9, 10, 15].includes(i) ? 1 : 0.3,
+                      backgroundColor: [0, 4, 6, 8].includes(i) ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)',
                     }}
                   />
                 ))}
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-3">
+            <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">
               Build Better Habits
             </h2>
-            <p className="text-[var(--muted)] mb-8 max-w-md mx-auto leading-relaxed">
-              Track your daily progress, set quarterly goals, and stay accountable with friends. Simple, visual, and effective.
+            <p className="text-[var(--muted)] mb-6 text-sm leading-relaxed">
+              Track your daily progress with a simple, visual habit tracker.
             </p>
             <button
               onClick={() => setShowAuthModal(true)}
-              className="bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-8 py-3 rounded-xl transition-all hover:scale-105 shadow-lg shadow-green-500/20"
+              className="pill-button bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white font-medium px-6 py-2.5 shadow-lg shadow-green-500/20"
             >
-              Get Started Free
+              Get Started
             </button>
-            <p className="text-[var(--muted-light)] text-sm mt-4">
-              No credit card required
-            </p>
           </div>
         ) : loading ? (
           // Loading state
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[var(--card-bg)] rounded-xl p-5 animate-pulse border border-[var(--card-border)]">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="h-5 w-32 bg-[var(--card-border)] rounded mb-2" />
-                    <div className="h-3 w-48 bg-[var(--card-border)] rounded opacity-50" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="grid grid-cols-7 gap-1">
-                    {[...Array(28)].map((_, j) => (
-                      <div key={j} className="w-3 h-3 bg-[var(--card-border)] rounded-sm opacity-50" />
-                    ))}
-                  </div>
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="glass-card p-5 animate-pulse">
+                <div className="h-5 w-28 bg-[var(--card-border)] rounded-full mb-3" />
+                <div className="grid grid-cols-7 gap-1">
+                  {[...Array(21)].map((_, j) => (
+                    <div key={j} className="w-3 h-3 bg-[var(--card-border)] rounded-sm opacity-50" />
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         ) : habits.length === 0 ? (
           // Empty state - No habits yet
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[var(--card-bg)] flex items-center justify-center border border-[var(--card-border)]">
-              <Sparkles className="text-[var(--accent-500)]" size={32} />
+          <div className="glass-card p-8 text-center">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[var(--accent-bg)] flex items-center justify-center">
+              <Sparkles className="text-[var(--accent-500)]" size={24} />
             </div>
-            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+            <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
               Start Your Journey
             </h3>
-            <p className="text-[var(--muted)] mb-6 max-w-sm mx-auto">
-              Create your first habit and begin tracking your progress. Small steps lead to big changes.
+            <p className="text-[var(--muted)] mb-5 text-sm">
+              Create your first habit to begin tracking.
             </p>
             <button
               onClick={() => {
                 setEditingHabit(null)
                 setShowHabitModal(true)
               }}
-              className="inline-flex items-center gap-2 bg-[var(--accent-600)] hover:bg-[var(--accent-500)] text-white font-medium px-6 py-2.5 rounded-xl transition-all hover:scale-105"
+              className="pill-button inline-flex items-center gap-2 bg-[var(--accent-500)] hover:bg-[var(--accent-400)] text-white font-medium px-5 py-2"
             >
-              <Plus size={18} />
-              Create Your First Habit
+              <Plus size={16} />
+              Create Habit
             </button>
 
             {/* Suggested habits */}
-            <div className="mt-10 pt-8 border-t border-[var(--card-border)]">
-              <p className="text-[var(--muted-light)] text-sm mb-4">Popular habits to get started</p>
+            <div className="mt-6 pt-5 border-t border-[var(--card-border)]">
+              <p className="text-[var(--muted-light)] text-xs mb-3">Popular habits</p>
               <div className="flex flex-wrap justify-center gap-2">
-                {['Morning Exercise', 'Read 30 mins', 'Meditate', 'Drink Water', 'No Social Media'].map((suggestion) => (
+                {['Exercise', 'Read', 'Meditate', 'Journal'].map((suggestion) => (
                   <button
                     key={suggestion}
                     onClick={() => {
                       setEditingHabit(null)
                       setShowHabitModal(true)
                     }}
-                    className="px-3 py-1.5 bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] text-[var(--muted)] hover:text-[var(--foreground)] text-sm rounded-lg transition-colors border border-[var(--card-border)]"
+                    className="pill-button px-3 py-1 bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] text-[var(--muted)] hover:text-[var(--foreground)] text-xs transition-colors"
                   >
                     {suggestion}
                   </button>
@@ -556,7 +542,7 @@ export default function HabitTracker() {
           </div>
         ) : (
           // Habits list
-          <div className="space-y-4">
+          <div className="space-y-3">
             {habits.map((habit) => (
               <HabitCard
                 key={habit.id}
@@ -574,7 +560,8 @@ export default function HabitTracker() {
 
         {/* Partner Section */}
         {user && <PartnerSection quarter={quarter} year={year} />}
-      </main>
+        </main>
+      </div>
 
       {/* Habit Modal */}
       <HabitModal

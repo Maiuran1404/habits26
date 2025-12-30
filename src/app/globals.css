@@ -2,13 +2,13 @@
 
 /* Light mode (default) */
 :root {
-  --background: #fafafa;
-  --foreground: #09090b;
-  --card-bg: #ffffff;
-  --card-border: #e4e4e7;
-  --card-hover-border: #d4d4d8;
-  --muted: #71717a;
-  --muted-light: #a1a1aa;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --card-hover-border: rgba(0, 0, 0, 0.15);
+  --muted: #64748b;
+  --muted-light: #94a3b8;
 
   /* Green color palette */
   --accent-50: #f0fdf4;
@@ -25,25 +25,35 @@
   /* Semantic colors */
   --accent-primary: var(--accent-500);
   --accent-hover: var(--accent-400);
-  --accent-bg: var(--accent-50);
-  --accent-bg-hover: var(--accent-100);
-  --accent-border: var(--accent-200);
-  --accent-text: var(--accent-700);
-  --accent-text-light: var(--accent-600);
+  --accent-bg: rgba(34, 197, 94, 0.08);
+  --accent-bg-hover: rgba(34, 197, 94, 0.15);
+  --accent-border: rgba(34, 197, 94, 0.2);
+  --accent-text: var(--accent-600);
+  --accent-text-light: var(--accent-500);
+
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 
   /* Scrollbar */
-  --scrollbar-track: #f4f4f5;
-  --scrollbar-thumb: #d4d4d8;
-  --scrollbar-thumb-hover: #a1a1aa;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+
+  /* Border radius */
+  --radius-card: 1.5rem;
+  --radius-button: 9999px;
+  --radius-input: 1rem;
 }
 
 /* Dark mode */
 .dark {
-  --background: #09090b;
+  --background: #0a0a0a;
   --foreground: #fafafa;
-  --card-bg: rgba(24, 24, 27, 0.8);
-  --card-border: #27272a;
-  --card-hover-border: #3f3f46;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-hover-border: rgba(255, 255, 255, 0.15);
   --muted: #a1a1aa;
   --muted-light: #71717a;
 
@@ -68,10 +78,15 @@
   --accent-text: var(--accent-400);
   --accent-text-light: var(--accent-300);
 
+  /* Glass effect */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
   /* Scrollbar */
-  --scrollbar-track: #18181b;
-  --scrollbar-thumb: #3f3f46;
-  --scrollbar-thumb-hover: #52525b;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
 }
 
 @theme inline {
@@ -89,8 +104,28 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
-  min-height: 100vh;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100dvh;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-card);
+}
+
+/* Pill button */
+.pill-button {
+  border-radius: var(--radius-button);
+  transition: all 0.2s ease;
+}
+
+.pill-button:active {
+  transform: scale(0.95);
 }
 
 /* Smooth scrolling */

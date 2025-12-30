@@ -84,36 +84,24 @@ export default function HabitGrid({
   return (
     <div className="w-full">
       {/* Three months in a row */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {months.map((month, monthIndex) => (
           <div key={month.name} className="flex flex-col">
             {/* Month header */}
-            <div className="text-xs font-semibold text-[var(--muted)] mb-1.5 text-center">
+            <div className="text-[10px] font-medium text-[var(--muted)] mb-2 text-center uppercase tracking-wide">
               {month.name}
             </div>
 
-            {/* Day labels */}
-            <div className="grid grid-cols-7 gap-[2px] mb-1">
-              {DAY_LABELS.map((day, i) => (
-                <div
-                  key={`${month.name}-${day}-${i}`}
-                  className="text-[9px] sm:text-[10px] text-[var(--muted-light)] text-center font-medium"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-
             {/* Calendar grid */}
-            <div className="flex flex-col gap-[2px]">
+            <div className="flex flex-col gap-[3px]">
               {month.weeks.map((week, weekIndex) => (
-                <div key={`${month.name}-week-${weekIndex}`} className="grid grid-cols-7 gap-[2px]">
+                <div key={`${month.name}-week-${weekIndex}`} className="grid grid-cols-7 gap-[3px]">
                   {week.map((day, dayIndex) => {
                     if (!day) {
                       return (
                         <div
                           key={`empty-${monthIndex}-${weekIndex}-${dayIndex}`}
-                          className="w-3 h-3 sm:w-3.5 sm:h-3.5"
+                          className="w-3 h-3"
                         />
                       )
                     }
@@ -125,7 +113,7 @@ export default function HabitGrid({
                     const isInQuarter = dateStr >= format(quarterStart, 'yyyy-MM-dd') &&
                                        dateStr <= format(quarterEnd, 'yyyy-MM-dd')
 
-                    let bgStyle = 'bg-[var(--card-border)]/50'
+                    let bgStyle = 'bg-[var(--foreground)]/[0.06]'
                     let customBg: string | undefined
 
                     if (entry) {
@@ -133,14 +121,14 @@ export default function HabitGrid({
                         bgStyle = ''
                         customBg = color
                       } else if (entry.status === 'missed') {
-                        bgStyle = 'bg-red-500/60'
+                        bgStyle = 'bg-red-500/50'
                       } else if (entry.status === 'skipped') {
-                        bgStyle = 'bg-[var(--muted-light)]/50'
+                        bgStyle = 'bg-[var(--muted-light)]/30'
                       }
                     } else if (isFuture) {
-                      bgStyle = 'bg-[var(--card-border)]/20'
+                      bgStyle = 'bg-[var(--foreground)]/[0.03]'
                     } else if (!isInQuarter) {
-                      bgStyle = 'bg-[var(--card-border)]/10'
+                      bgStyle = 'bg-[var(--foreground)]/[0.02]'
                     }
 
                     return (
@@ -148,11 +136,12 @@ export default function HabitGrid({
                         key={dateStr}
                         onClick={() => !readonly && !isFuture && onDayClick?.(dateStr)}
                         disabled={readonly || isFuture}
-                        className={`w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-[3px] transition-all ${
-                          !readonly && !isFuture ? 'hover:scale-125 hover:z-10 cursor-pointer' : ''
-                        } ${isToday ? 'ring-1 ring-[var(--foreground)] ring-offset-1 ring-offset-[var(--card-bg)]' : ''} ${bgStyle}`}
+                        className={`w-3 h-3 rounded-[4px] transition-all ${
+                          !readonly && !isFuture ? 'hover:scale-[1.3] hover:z-10 cursor-pointer' : ''
+                        } ${isToday ? 'ring-1.5 ring-[var(--accent-500)] ring-offset-1 ring-offset-[var(--glass-bg)]' : ''} ${bgStyle}`}
                         style={{
                           backgroundColor: customBg,
+                          boxShadow: entry?.status === 'done' ? `0 1px 3px ${color}40` : undefined,
                         }}
                         title={`${format(day, 'EEE, MMM d')}${entry ? ` - ${entry.status}` : ''}`}
                       />

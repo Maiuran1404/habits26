@@ -42,27 +42,26 @@ export default function QuarterSelector({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="glass-card inline-flex items-center gap-1 p-1.5">
       <button
         onClick={goToPrevious}
-        className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
+        className="pill-button p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
       >
-        <ChevronLeft size={20} />
+        <ChevronLeft size={18} />
       </button>
 
-      <div className="text-center min-w-[160px]">
-        <div className="text-xl font-bold text-[var(--foreground)]">
+      <div className="text-center px-4 py-1">
+        <div className="text-sm font-semibold text-[var(--foreground)]">
           {quarter} {year}
         </div>
-        <div className="text-xs text-[var(--muted-light)]">{quarterLabels[quarter]}</div>
-        <div className="text-xs text-[var(--accent-text)] font-medium mt-0.5">90-day sprint</div>
+        <div className="text-[10px] text-[var(--muted)]">{quarterLabels[quarter]}</div>
       </div>
 
       <button
         onClick={goToNext}
-        className="p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--accent-bg)] rounded-lg transition-colors"
+        className="pill-button p-2 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
       >
-        <ChevronRight size={20} />
+        <ChevronRight size={18} />
       </button>
     </div>
   )

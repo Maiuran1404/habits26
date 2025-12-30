@@ -27,14 +27,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), [])
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    // Timeout for profile fetch - don't hang forever (2 seconds)
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
+    })
 
-    if (data) {
-      setProfile(data as Profile)
+    try {
+      const fetchPromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      const { data } = await Promise.race([fetchPromise, timeoutPromise.then(() => ({ data: null }))]) as any
+
+      if (data) {
+        setProfile(data as Profile)
+      }
+    } catch (err) {
+      console.warn('Profile fetch failed or timed out:', err)
+      // Don't block loading - profile can be null
     }
   }
 
@@ -46,15 +58,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
+      // Overall timeout for auth initialization (3 seconds max)
+      const timeout = setTimeout(() => {
+        console.warn('Auth initialization timed out')
+        setLoading(false)
+      }, 3000)
 
-      if (session?.user) {
-        await fetchProfile(session.user.id)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setSession(session)
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        }
+      } catch (err) {
+        console.error('Error during auth initialization:', err)
+      } finally {
+        clearTimeout(timeout)
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     getSession()

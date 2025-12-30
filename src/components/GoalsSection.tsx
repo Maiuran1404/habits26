@@ -60,12 +60,23 @@ export default function GoalsSection() {
       return
     }
 
+    setLoading(true)
+
+    // Timeout safety net - don't hang forever (3 seconds for goals)
+    const timeout = setTimeout(() => {
+      console.warn('Goals fetch timed out')
+      setGoals([])
+      setLoading(false)
+    }, 3000)
+
     try {
       const { data, error } = await supabase
         .from('goals')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: true })
+
+      clearTimeout(timeout)
 
       if (error) {
         console.error('Error fetching goals:', error)
@@ -74,6 +85,7 @@ export default function GoalsSection() {
         setGoals(data || [])
       }
     } catch (err) {
+      clearTimeout(timeout)
       console.error('Error fetching goals:', err)
       setGoals([])
     } finally {
