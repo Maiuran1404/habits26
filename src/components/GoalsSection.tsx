@@ -15,6 +15,7 @@ interface GoalColumn {
 
 export default function GoalsSection() {
   const { user } = useAuth()
+  const userId = user?.id
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [addingTo, setAddingTo] = useState<GoalType | null>(null)
@@ -53,7 +54,7 @@ export default function GoalsSection() {
   }, [])
 
   const fetchGoals = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setGoals([])
       setLoading(false)
       return
@@ -63,7 +64,7 @@ export default function GoalsSection() {
       const { data, error } = await supabase
         .from('goals')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: true })
 
       if (error) {
@@ -78,19 +79,19 @@ export default function GoalsSection() {
     } finally {
       setLoading(false)
     }
-  }, [user, supabase])
+  }, [userId, supabase])
 
   useEffect(() => {
     fetchGoals()
   }, [fetchGoals])
 
   const handleAddGoal = async (type: GoalType) => {
-    if (!user || !newGoalTitle.trim()) return
+    if (!userId || !newGoalTitle.trim()) return
 
     const tempId = `temp-${Date.now()}`
     const newGoal: Goal = {
       id: tempId,
-      user_id: user.id,
+      user_id: userId,
       title: newGoalTitle.trim(),
       type,
       completed: false,
@@ -104,7 +105,7 @@ export default function GoalsSection() {
     const { data, error } = await supabase
       .from('goals')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         title: newGoalTitle.trim(),
         type,
         completed: false,
@@ -159,7 +160,7 @@ export default function GoalsSection() {
     return goals.filter((g) => g.type === type)
   }
 
-  if (!user) return null
+  if (!userId) return null
 
   return (
     <div className="mb-6">
