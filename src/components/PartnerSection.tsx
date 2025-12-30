@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { Users, UserPlus, X, Check, Loader2, UserMinus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -104,16 +104,14 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
       setFriendIds(new Set(partnerIds))
 
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', partnerIds)
+      // Fetch profiles and habits in parallel for better performance
+      const [profilesResult, habitsResult] = await Promise.all([
+        supabase.from('profiles').select('*').in('id', partnerIds),
+        supabase.from('habits').select('*, entries:habit_entries(*)').in('user_id', partnerIds).eq('archived', false)
+      ])
 
-      const { data: habits } = await supabase
-        .from('habits')
-        .select('*, entries:habit_entries(*)')
-        .in('user_id', partnerIds)
-        .eq('archived', false)
+      const profiles = profilesResult.data
+      const habits = habitsResult.data
 
       const partnerData: PartnerData[] = partnerships.map((partnership: Partnership) => {
         const partnerId = partnership.user_id === userId
@@ -402,8 +400,8 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   )
 }
 
-/* Friend Habits Section - Shows a friend's profile and all their habits */
-function FriendHabitsSection({
+/* Friend Habits Section - Memoized to prevent unnecessary re-renders */
+const FriendHabitsSection = memo(function FriendHabitsSection({
   partner,
   quarter,
   year,
@@ -489,4 +487,4 @@ function FriendHabitsSection({
       </div>
     </div>
   )
-}
+})

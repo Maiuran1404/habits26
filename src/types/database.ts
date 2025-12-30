@@ -42,6 +42,9 @@ export interface Goal {
   type: GoalType
   completed: boolean
   created_at: string
+  quarter?: Quarter | null
+  year?: number | null
+  week_start?: string | null
 }
 
 export interface PartnerWithProfile extends Partnership {

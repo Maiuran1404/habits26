@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo } from 'react'
-import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDay, addMonths, isSameMonth } from 'date-fns'
+import { useMemo, memo } from 'react'
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDay, addMonths } from 'date-fns'
 import { HabitEntry, Quarter, getQuarterDates } from '@/types/database'
 
 interface HabitGridProps {
@@ -13,10 +13,10 @@ interface HabitGridProps {
   readonly?: boolean
 }
 
-const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-export default function HabitGrid({
+// Memoized to prevent expensive re-renders of calendar grid
+const HabitGrid = memo(function HabitGrid({
   entries,
   color,
   quarter,
@@ -155,4 +155,6 @@ export default function HabitGrid({
       </div>
     </div>
   )
-}
+})
+
+export default HabitGrid

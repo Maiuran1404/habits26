@@ -28,22 +28,35 @@ const createChainableMock = (finalValue: any = { data: [], error: null }) => {
   return new Proxy({}, handler)
 }
 
+// Singleton instance for browser-side client
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
+
+// Mock client for when env vars are missing
+const mockClient = {
+  auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    getUser: async () => ({ data: { user: null }, error: null }),
+    signUp: async () => ({ data: null, error: new Error('Supabase not configured') }),
+    signInWithPassword: async () => ({ data: null, error: new Error('Supabase not configured') }),
+    signOut: async () => ({ error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+  },
+  from: () => createChainableMock(),
+  rpc: async () => ({ data: null, error: null }),
+} as any
+
 export function createClient() {
   if (!supabaseUrl || !supabaseAnonKey) {
     // Return a mock client that does nothing during build/SSR without env vars
-    return {
-      auth: {
-        getSession: async () => ({ data: { session: null }, error: null }),
-        getUser: async () => ({ data: { user: null }, error: null }),
-        signUp: async () => ({ data: null, error: new Error('Supabase not configured') }),
-        signInWithPassword: async () => ({ data: null, error: new Error('Supabase not configured') }),
-        signOut: async () => ({ error: null }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-      },
-      from: () => createChainableMock(),
-      rpc: async () => ({ data: null, error: null }),
-    } as any
+    return mockClient
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  // Return existing instance if available (singleton pattern)
+  if (browserClient) {
+    return browserClient
+  }
+
+  // Create and cache the client
+  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return browserClient
 }

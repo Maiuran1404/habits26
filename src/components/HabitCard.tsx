@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { Trash2, Edit2, Check, X, Circle } from 'lucide-react'
 import { HabitWithEntries, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
-import { format, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval, subDays, parseISO } from 'date-fns'
+import { format, eachDayOfInterval, subDays, parseISO } from 'date-fns'
 
 interface HabitCardProps {
   habit: HabitWithEntries
@@ -17,7 +17,8 @@ interface HabitCardProps {
   readonly?: boolean
 }
 
-export default function HabitCard({
+// Memoized to prevent re-renders when parent state changes but props are the same
+const HabitCard = memo(function HabitCard({
   habit,
   quarter,
   year,
@@ -188,4 +189,6 @@ export default function HabitCard({
       )}
     </div>
   )
-}
+})
+
+export default HabitCard

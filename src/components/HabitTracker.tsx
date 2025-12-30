@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { HabitWithEntries, Quarter, getCurrentQuarter, Habit } from '@/types/database'
 import HabitCard from './HabitCard'
-import HabitModal from './HabitModal'
 import QuarterSelector from './QuarterSelector'
-import PartnerSection from './PartnerSection'
 import ThemeToggle from './ThemeToggle'
 import GoalsSection from './GoalsSection'
+
+// Lazy load components that aren't immediately visible
+const HabitModal = dynamic(() => import('./HabitModal'), { ssr: false })
+const PartnerSection = dynamic(() => import('./PartnerSection'), { ssr: false })
 
 export default function HabitTracker() {
   const { user, profile, loading: authLoading, setShowAuthModal, signOut } = useAuth()
@@ -252,15 +255,23 @@ export default function HabitTracker() {
     }
   }
 
-  const handleTodayClick = (habitId: string) => {
-    const today = format(new Date(), 'yyyy-MM-dd')
-    handleDayClick(habitId, today)
-  }
+  // Memoize today's date string to avoid recalculating on each render
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
 
-  const handleEditHabit = (habit: HabitWithEntries) => {
+  const handleTodayClick = useCallback((habitId: string) => {
+    handleDayClick(habitId, todayStr)
+  }, [todayStr])
+
+  const handleEditHabit = useCallback((habit: HabitWithEntries) => {
     setEditingHabit(habit)
     setShowHabitModal(true)
-  }
+  }, [])
+
+  // Memoize quarter change handler
+  const handleQuarterChange = useCallback((q: Quarter, y: number) => {
+    setQuarter(q)
+    setYear(y)
+  }, [])
 
   return (
     <div className="min-h-[100dvh] bg-[var(--background)] flex flex-col items-center justify-start py-8 px-4">
@@ -302,7 +313,7 @@ export default function HabitTracker() {
                           className="fixed inset-0 z-40"
                           onClick={() => setShowSettings(false)}
                         />
-                        <div className="absolute right-0 top-full mt-2 z-50 glass-card overflow-hidden min-w-[200px]">
+                        <div className="absolute right-0 top-full mt-2 z-50 overflow-hidden min-w-[200px] rounded-2xl border border-[var(--glass-border)] shadow-lg" style={{ background: 'var(--background)' }}>
                           <div className="px-4 py-3 border-b border-[var(--card-border)]">
                             <p className="text-sm font-medium text-[var(--foreground)]">
                               {profile?.display_name || user.email?.split('@')[0]}
@@ -406,7 +417,7 @@ export default function HabitTracker() {
         )}
 
         {/* Goals Section */}
-        {user && <GoalsSection />}
+        {user && <GoalsSection quarter={quarter} year={year} />}
 
         {/* User Profile Section */}
         {!authLoading && user && profile && (
@@ -433,10 +444,7 @@ export default function HabitTracker() {
           <QuarterSelector
             quarter={quarter}
             year={year}
-            onChange={(q, y) => {
-              setQuarter(q)
-              setYear(y)
-            }}
+            onChange={handleQuarterChange}
           />
         </div>
 

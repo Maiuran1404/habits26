@@ -1,57 +1,90 @@
 'use client'
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Plus, X, Circle, CheckCircle2 } from 'lucide-react'
-import { format, startOfWeek, endOfWeek } from 'date-fns'
+import { Plus, X, Circle, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
-import { Goal, GoalType } from '@/types/database'
+import { Goal, GoalType, Quarter, getQuarterDates } from '@/types/database'
 
 interface GoalColumn {
   type: GoalType
   title: string
   subtitle: string
+  weekStart?: string
 }
 
-export default function GoalsSection() {
+interface GoalsSectionProps {
+  quarter: Quarter
+  year: number
+}
+
+export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
   const { user } = useAuth()
   const userId = user?.id
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [addingTo, setAddingTo] = useState<GoalType | null>(null)
   const [newGoalTitle, setNewGoalTitle] = useState('')
+  const [weekOffset, setWeekOffset] = useState(0)
 
   const supabase = useMemo(() => createClient(), [])
 
-  const columns = useMemo<GoalColumn[]>(() => {
-    const today = new Date()
-    const weekStart = startOfWeek(today, { weekStartsOn: 1 })
-    const weekEnd = endOfWeek(today, { weekStartsOn: 1 })
+  // Get the quarter dates
+  const quarterDates = useMemo(() => getQuarterDates(year, quarter), [year, quarter])
 
-    const getQuarterLabel = () => {
-      const month = today.getMonth()
-      const q = Math.floor(month / 3) + 1
-      return `Q${q} ${today.getFullYear()}`
+  // Calculate the current week within the selected quarter
+  const currentWeek = useMemo(() => {
+    const today = new Date()
+    const quarterStart = quarterDates.start
+    const quarterEnd = quarterDates.end
+
+    // If we're in the selected quarter, use current week
+    // Otherwise, use the first week of the quarter
+    let baseDate: Date
+    if (today >= quarterStart && today <= quarterEnd) {
+      baseDate = today
+    } else if (today < quarterStart) {
+      baseDate = quarterStart
+    } else {
+      baseDate = quarterEnd
     }
 
+    // Apply week offset
+    const offsetDate = weekOffset === 0 ? baseDate : addWeeks(baseDate, weekOffset)
+
+    // Clamp to quarter bounds
+    const weekStart = startOfWeek(offsetDate, { weekStartsOn: 1 })
+    const weekEnd = endOfWeek(offsetDate, { weekStartsOn: 1 })
+
+    return { weekStart, weekEnd }
+  }, [quarterDates, weekOffset])
+
+  // Reset week offset when quarter changes
+  useEffect(() => {
+    setWeekOffset(0)
+  }, [quarter, year])
+
+  const columns = useMemo<GoalColumn[]>(() => {
     return [
       {
         type: 'weekly' as GoalType,
         title: 'Week',
-        subtitle: `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`,
+        subtitle: `${format(currentWeek.weekStart, 'MMM d')} - ${format(currentWeek.weekEnd, 'MMM d')}`,
+        weekStart: format(currentWeek.weekStart, 'yyyy-MM-dd'),
       },
       {
         type: 'quarterly' as GoalType,
         title: 'Quarter',
-        subtitle: getQuarterLabel(),
+        subtitle: `${quarter} ${year}`,
       },
       {
         type: 'yearly' as GoalType,
         title: 'Year',
-        subtitle: today.getFullYear().toString(),
+        subtitle: year.toString(),
       },
     ]
-  }, [])
+  }, [quarter, year, currentWeek])
 
   const fetchGoals = useCallback(async () => {
     if (!userId) {
@@ -97,7 +130,7 @@ export default function GoalsSection() {
     fetchGoals()
   }, [fetchGoals])
 
-  const handleAddGoal = async (type: GoalType) => {
+  const handleAddGoal = async (type: GoalType, weekStart?: string) => {
     if (!userId || !newGoalTitle.trim()) return
 
     const tempId = `temp-${Date.now()}`
@@ -108,20 +141,36 @@ export default function GoalsSection() {
       type,
       completed: false,
       created_at: new Date().toISOString(),
+      quarter: type === 'quarterly' || type === 'weekly' ? quarter : null,
+      year: year,
+      week_start: type === 'weekly' ? weekStart : null,
     }
 
     setGoals((prev) => [...prev, newGoal])
     setNewGoalTitle('')
     setAddingTo(null)
 
+    const insertData: any = {
+      user_id: userId,
+      title: newGoalTitle.trim(),
+      type,
+      completed: false,
+      year: year,
+    }
+
+    // Add quarter for quarterly and weekly goals
+    if (type === 'quarterly' || type === 'weekly') {
+      insertData.quarter = quarter
+    }
+
+    // Add week_start for weekly goals
+    if (type === 'weekly' && weekStart) {
+      insertData.week_start = weekStart
+    }
+
     const { data, error } = await supabase
       .from('goals')
-      .insert({
-        user_id: userId,
-        title: newGoalTitle.trim(),
-        type,
-        completed: false,
-      })
+      .insert(insertData)
       .select()
       .single()
 
@@ -168,8 +217,32 @@ export default function GoalsSection() {
     }
   }
 
-  const getGoalsByType = (type: GoalType) => {
-    return goals.filter((g) => g.type === type)
+  const getGoalsByType = (type: GoalType, weekStart?: string) => {
+    return goals.filter((g) => {
+      if (g.type !== type) return false
+
+      // For yearly goals, match by year
+      if (type === 'yearly') {
+        // Include goals without year field (legacy) or matching year
+        return !g.year || g.year === year
+      }
+
+      // For quarterly goals, match by quarter and year
+      if (type === 'quarterly') {
+        // Include goals without quarter/year (legacy) or matching
+        if (!g.quarter && !g.year) return true
+        return g.quarter === quarter && g.year === year
+      }
+
+      // For weekly goals, match by week_start
+      if (type === 'weekly') {
+        // Include goals without week_start (legacy) or matching
+        if (!g.week_start) return true
+        return g.week_start === weekStart
+      }
+
+      return true
+    })
   }
 
   if (!userId) return null
@@ -178,7 +251,7 @@ export default function GoalsSection() {
     <div className="glass-card p-4 overflow-hidden">
       <div className="grid grid-cols-3 gap-3">
         {columns.map((column) => {
-          const columnGoals = getGoalsByType(column.type)
+          const columnGoals = getGoalsByType(column.type, column.weekStart)
           return (
             <div
               key={column.type}
@@ -189,7 +262,25 @@ export default function GoalsSection() {
                 <h3 className="font-semibold text-[var(--foreground)] text-xs">
                   {column.title}
                 </h3>
-                <p className="text-[10px] text-[var(--muted)]">{column.subtitle}</p>
+                {column.type === 'weekly' ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setWeekOffset(prev => prev - 1)}
+                      className="p-0.5 hover:bg-[var(--card-bg)] rounded transition-colors"
+                    >
+                      <ChevronLeft size={12} className="text-[var(--muted)]" />
+                    </button>
+                    <p className="text-[10px] text-[var(--muted)] flex-1 text-center">{column.subtitle}</p>
+                    <button
+                      onClick={() => setWeekOffset(prev => prev + 1)}
+                      className="p-0.5 hover:bg-[var(--card-bg)] rounded transition-colors"
+                    >
+                      <ChevronRight size={12} className="text-[var(--muted)]" />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-[var(--muted)]">{column.subtitle}</p>
+                )}
               </div>
 
               {/* Goals List */}
@@ -245,7 +336,7 @@ export default function GoalsSection() {
                           value={newGoalTitle}
                           onChange={(e) => setNewGoalTitle(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddGoal(column.type)
+                            if (e.key === 'Enter') handleAddGoal(column.type, column.weekStart)
                             if (e.key === 'Escape') {
                               setAddingTo(null)
                               setNewGoalTitle('')
@@ -262,7 +353,7 @@ export default function GoalsSection() {
                           className="flex-1 bg-transparent text-xs text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none border-b border-[var(--accent-border)] py-0.5"
                         />
                         <button
-                          onClick={() => handleAddGoal(column.type)}
+                          onClick={() => handleAddGoal(column.type, column.weekStart)}
                           className="pill-button p-1 hover:bg-[var(--card-bg)]"
                         >
                           <Plus size={12} className="text-[var(--accent-500)]" />
