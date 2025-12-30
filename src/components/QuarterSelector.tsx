@@ -50,11 +50,12 @@ export default function QuarterSelector({
         <ChevronLeft size={20} />
       </button>
 
-      <div className="text-center min-w-[140px]">
+      <div className="text-center min-w-[160px]">
         <div className="text-xl font-bold text-white">
           {quarter} {year}
         </div>
         <div className="text-xs text-zinc-500">{quarterLabels[quarter]}</div>
+        <div className="text-xs text-emerald-500 font-medium mt-0.5">90-day sprint</div>
       </div>
 
       <button

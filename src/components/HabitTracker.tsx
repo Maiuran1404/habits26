@@ -60,61 +60,153 @@ export default function HabitTracker() {
 
     const existingEntry = habit.entries.find((e) => e.date === date)
 
+    // Optimistic update
+    const updateEntries = (entries: typeof habit.entries) => {
+      if (existingEntry) {
+        if (existingEntry.status === 'done') {
+          return entries.map((e) =>
+            e.id === existingEntry.id ? { ...e, status: 'missed' as const } : e
+          )
+        } else {
+          return entries.filter((e) => e.id !== existingEntry.id)
+        }
+      } else {
+        return [
+          ...entries,
+          {
+            id: `temp-${Date.now()}`,
+            habit_id: habitId,
+            date,
+            status: 'done' as const,
+            created_at: new Date().toISOString(),
+          },
+        ]
+      }
+    }
+
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === habitId ? { ...h, entries: updateEntries(h.entries) } : h
+      )
+    )
+
+    // Server update
+    let error = null
     if (existingEntry) {
       if (existingEntry.status === 'done') {
-        await supabase
+        const result = await supabase
           .from('habit_entries')
           .update({ status: 'missed' })
           .eq('id', existingEntry.id)
+        error = result.error
       } else {
-        await supabase
+        const result = await supabase
           .from('habit_entries')
           .delete()
           .eq('id', existingEntry.id)
+        error = result.error
       }
     } else {
-      await supabase.from('habit_entries').insert({
+      const result = await supabase.from('habit_entries').insert({
         habit_id: habitId,
         date,
         status: 'done',
       })
+      error = result.error
     }
 
-    fetchHabits()
+    // Revert on error
+    if (error) {
+      console.error('Error updating entry:', error)
+      fetchHabits()
+    }
   }
 
   const handleSaveHabit = async (habitData: {
     name: string
     description: string
     color: string
+    target_per_week: number
   }) => {
     if (!user) throw new Error('You must be logged in')
 
     if (editingHabit) {
+      // Optimistic update for editing
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id === editingHabit.id
+            ? { ...h, ...habitData }
+            : h
+        )
+      )
+
       const { error } = await supabase
         .from('habits')
         .update(habitData)
         .eq('id', editingHabit.id)
 
-      if (error) throw new Error(error.message)
+      if (error) {
+        fetchHabits() // Revert on error
+        throw new Error(error.message)
+      }
     } else {
-      const { error } = await supabase.from('habits').insert({
+      // Optimistic update for creating - add with temp ID
+      const tempId = `temp-${Date.now()}`
+      const newHabit: HabitWithEntries = {
+        id: tempId,
+        user_id: user.id,
+        name: habitData.name,
+        description: habitData.description,
+        color: habitData.color,
+        target_per_week: habitData.target_per_week,
+        created_at: new Date().toISOString(),
+        archived: false,
+        entries: [],
+      }
+      setHabits((prev) => [...prev, newHabit])
+
+      const { data, error } = await supabase.from('habits').insert({
         ...habitData,
         user_id: user.id,
-      })
+      }).select().single()
 
-      if (error) throw new Error(error.message)
+      if (error) {
+        fetchHabits() // Revert on error
+        throw new Error(error.message)
+      }
+
+      // Replace temp habit with real one
+      if (data) {
+        setHabits((prev) =>
+          prev.map((h) => (h.id === tempId ? { ...data, entries: [] } : h))
+        )
+      }
     }
 
     setEditingHabit(null)
-    fetchHabits()
   }
 
   const handleDeleteHabit = async (habitId: string) => {
     if (!confirm('Are you sure you want to delete this habit?')) return
 
-    await supabase.from('habits').delete().eq('id', habitId)
-    fetchHabits()
+    // Optimistic update
+    const deletedHabit = habits.find((h) => h.id === habitId)
+    setHabits((prev) => prev.filter((h) => h.id !== habitId))
+
+    const { error } = await supabase.from('habits').delete().eq('id', habitId)
+
+    if (error) {
+      // Revert on error
+      console.error('Error deleting habit:', error)
+      if (deletedHabit) {
+        setHabits((prev) => [...prev, deletedHabit])
+      }
+    }
+  }
+
+  const handleTodayClick = (habitId: string) => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    handleDayClick(habitId, today)
   }
 
   const handleEditHabit = (habit: HabitWithEntries) => {
@@ -208,7 +300,7 @@ export default function HabitTracker() {
                   {profile.display_name || profile.email.split('@')[0]}
                 </h2>
                 <p className="text-zinc-500 text-sm">
-                  {habits.length} habit{habits.length !== 1 ? 's' : ''} this quarter
+                  {habits.length} habit{habits.length !== 1 ? 's' : ''} this sprint
                 </p>
               </div>
             </div>
@@ -334,6 +426,7 @@ export default function HabitTracker() {
                 quarter={quarter}
                 year={year}
                 onDayClick={handleDayClick}
+                onTodayClick={handleTodayClick}
                 onEdit={handleEditHabit}
                 onDelete={handleDeleteHabit}
               />
