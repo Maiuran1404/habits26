@@ -12,6 +12,7 @@ export interface Habit {
   name: string
   description: string | null
   color: string
+  target_per_week: number
   created_at: string
   archived: boolean
 }

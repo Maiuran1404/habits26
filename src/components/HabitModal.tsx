@@ -7,7 +7,7 @@ import { Habit } from '@/types/database'
 interface HabitModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (habit: { name: string; description: string; color: string }) => Promise<void>
+  onSave: (habit: { name: string; description: string; color: string; target_per_week: number }) => Promise<void>
   habit?: Habit | null
 }
 
@@ -22,6 +22,14 @@ const colorOptions = [
   '#f43f5e', // rose
 ]
 
+const frequencyPresets = [
+  { value: 7, label: 'Daily' },
+  { value: 5, label: '5x/week' },
+  { value: 3, label: '3x/week' },
+  { value: 2, label: '2x/week' },
+  { value: 1, label: '1x/week' },
+]
+
 export default function HabitModal({
   isOpen,
   onClose,
@@ -31,6 +39,7 @@ export default function HabitModal({
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [color, setColor] = useState(colorOptions[0])
+  const [targetPerWeek, setTargetPerWeek] = useState(7)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,10 +48,12 @@ export default function HabitModal({
       setName(habit.name)
       setDescription(habit.description || '')
       setColor(habit.color)
+      setTargetPerWeek(habit.target_per_week || 7)
     } else {
       setName('')
       setDescription('')
       setColor(colorOptions[0])
+      setTargetPerWeek(7)
     }
     setError(null)
   }, [habit, isOpen])
@@ -57,7 +68,7 @@ export default function HabitModal({
     setError(null)
 
     try {
-      await onSave({ name: name.trim(), description: description.trim(), color })
+      await onSave({ name: name.trim(), description: description.trim(), color, target_per_week: targetPerWeek })
       onClose()
     } catch (err) {
       console.error('Failed to save habit:', err)
@@ -140,6 +151,28 @@ export default function HabitModal({
                   }`}
                   style={{ backgroundColor: c }}
                 />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Weekly Target
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {frequencyPresets.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setTargetPerWeek(preset.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    targetPerWeek === preset.value
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
+                  }`}
+                >
+                  {preset.label}
+                </button>
               ))}
             </div>
           </div>

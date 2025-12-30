@@ -20,9 +20,13 @@ CREATE TABLE habits (
   name TEXT NOT NULL,
   description TEXT,
   color TEXT DEFAULT '#22c55e',
+  target_per_week INTEGER DEFAULT 7,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   archived BOOLEAN DEFAULT FALSE
 );
+
+-- Migration for existing databases:
+-- ALTER TABLE habits ADD COLUMN IF NOT EXISTS target_per_week INTEGER DEFAULT 7;
 
 -- Habit entries table (daily tracking)
 CREATE TABLE habit_entries (

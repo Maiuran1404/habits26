@@ -1,10 +1,10 @@
 'use client'
 
 import { useMemo } from 'react'
-import { MoreHorizontal, Trash2, Edit2 } from 'lucide-react'
+import { Trash2, Edit2, Check, X, Circle } from 'lucide-react'
 import { HabitWithEntries, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
-import { format, eachDayOfInterval } from 'date-fns'
+import { format, eachDayOfInterval, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns'
 
 interface HabitCardProps {
   habit: HabitWithEntries
