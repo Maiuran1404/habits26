@@ -11,6 +11,7 @@ interface HabitCardProps {
   quarter: Quarter
   year: number
   onDayClick?: (habitId: string, date: string) => void
+  onTodayClick?: (habitId: string) => void
   onEdit?: (habit: HabitWithEntries) => void
   onDelete?: (habitId: string) => void
   readonly?: boolean
@@ -21,6 +22,7 @@ export default function HabitCard({
   quarter,
   year,
   onDayClick,
+  onTodayClick,
   onEdit,
   onDelete,
   readonly = false,
@@ -53,6 +55,32 @@ export default function HabitCard({
         : 0,
     }
   }, [habit.entries, quarter, year])
+
+  // Weekly stats calculation
+  const weeklyStats = useMemo(() => {
+    const today = new Date()
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 }) // Monday
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 }) // Sunday
+
+    const completedThisWeek = habit.entries.filter(
+      (e) => e.status === 'done' &&
+             isWithinInterval(new Date(e.date), { start: weekStart, end: weekEnd })
+    ).length
+
+    const target = habit.target_per_week || 7
+
+    return {
+      completed: completedThisWeek,
+      target,
+      isDaily: target === 7,
+    }
+  }, [habit.entries, habit.target_per_week])
+
+  // Today's entry status
+  const todayEntry = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    return habit.entries.find((e) => e.date === todayStr)
+  }, [habit.entries])
 
   return (
     <div className="bg-zinc-900/80 backdrop-blur rounded-xl p-4 sm:p-5 border border-zinc-800 hover:border-zinc-700 transition-colors">
@@ -94,7 +122,7 @@ export default function HabitCard({
           />
         </div>
 
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 text-center">
           <div
             className="text-2xl font-bold"
             style={{ color: habit.color }}
@@ -104,7 +132,42 @@ export default function HabitCard({
           <div className="text-xs text-zinc-500">
             {stats.completed}/{stats.total}
           </div>
+          {!weeklyStats.isDaily && (
+            <div className="text-xs text-zinc-400 mt-1 font-medium">
+              {weeklyStats.completed}/{weeklyStats.target} this week
+            </div>
+          )}
         </div>
+
+        {/* Mark Today Button */}
+        {!readonly && (
+          <button
+            onClick={() => onTodayClick?.(habit.id)}
+            className="flex-shrink-0 ml-auto"
+            title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today'}
+          >
+            <div
+              className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                todayEntry?.status === 'done'
+                  ? 'shadow-lg'
+                  : todayEntry?.status === 'missed'
+                  ? 'bg-red-500/20'
+                  : 'bg-zinc-800 hover:bg-zinc-700'
+              }`}
+              style={{
+                backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
+              }}
+            >
+              {todayEntry?.status === 'done' ? (
+                <Check size={24} className="text-white" />
+              ) : todayEntry?.status === 'missed' ? (
+                <X size={24} className="text-red-400" />
+              ) : (
+                <Circle size={24} className="text-zinc-500" />
+              )}
+            </div>
+          </button>
+        )}
       </div>
     </div>
   )

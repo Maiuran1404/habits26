@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, LogOut, Settings, Target, Sparkles, Calendar } from 'lucide-react'
+import { Plus, LogOut, Settings, Target, Sparkles } from 'lucide-react'
+import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { HabitWithEntries, Quarter, getCurrentQuarter, Habit } from '@/types/database'
