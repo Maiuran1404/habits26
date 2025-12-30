@@ -110,31 +110,43 @@ export default function HabitCard({
         )}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-shrink-0">
-          <HabitGrid
-            entries={habit.entries}
-            color={habit.color}
-            quarter={quarter}
-            year={year}
-            onDayClick={readonly ? undefined : (date) => onDayClick?.(habit.id, date)}
-            readonly={readonly}
-          />
-        </div>
+      {/* Calendar Grid */}
+      <div className="mb-4">
+        <HabitGrid
+          entries={habit.entries}
+          color={habit.color}
+          quarter={quarter}
+          year={year}
+          onDayClick={readonly ? undefined : (date) => onDayClick?.(habit.id, date)}
+          readonly={readonly}
+        />
+      </div>
 
-        <div className="flex-shrink-0 text-center">
-          <div
-            className="text-2xl font-bold"
-            style={{ color: habit.color }}
-          >
-            {stats.percentage}%
+      {/* Stats and Today Button Row */}
+      <div className="flex items-center justify-between pt-3 border-t border-[var(--card-border)]/50">
+        <div className="flex items-center gap-4">
+          {/* Main Stats */}
+          <div className="text-center">
+            <div
+              className="text-2xl font-bold"
+              style={{ color: habit.color }}
+            >
+              {stats.percentage}%
+            </div>
+            <div className="text-xs text-[var(--muted-light)]">
+              {stats.completed}/{stats.total} days
+            </div>
           </div>
-          <div className="text-xs text-[var(--muted-light)]">
-            {stats.completed}/{stats.total}
-          </div>
+
+          {/* Weekly Stats */}
           {!weeklyStats.isDaily && (
-            <div className="text-xs text-[var(--muted)] mt-1 font-medium">
-              {weeklyStats.completed}/{weeklyStats.target} this week
+            <div className="text-center pl-4 border-l border-[var(--card-border)]/50">
+              <div className="text-lg font-semibold text-[var(--foreground)]">
+                {weeklyStats.completed}/{weeklyStats.target}
+              </div>
+              <div className="text-xs text-[var(--muted-light)]">
+                this week
+              </div>
             </div>
           )}
         </div>
@@ -143,7 +155,7 @@ export default function HabitCard({
         {!readonly && (
           <button
             onClick={() => onTodayClick?.(habit.id)}
-            className="flex-shrink-0 ml-auto"
+            className="flex-shrink-0"
             title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today'}
           >
             <div
