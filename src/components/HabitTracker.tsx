@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, LogOut, Settings, Target, Sparkles } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -22,10 +22,38 @@ export default function HabitTracker() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showSettings, setShowSettings] = useState(false)
 
-  const supabase = createClient()
+  // Mantra state
+  const [mantra, setMantra] = useState('')
+  const [isMantraLocked, setIsMantraLocked] = useState(true)
+  const [isEditingMantra, setIsEditingMantra] = useState(false)
+
+  // Load mantra from localStorage on mount
+  useEffect(() => {
+    const savedMantra = localStorage.getItem('habit-mantra')
+    const savedLocked = localStorage.getItem('habit-mantra-locked')
+    if (savedMantra) setMantra(savedMantra)
+    if (savedLocked !== null) setIsMantraLocked(savedLocked === 'true')
+  }, [])
+
+  // Save mantra to localStorage when it changes
+  const handleMantraChange = (newMantra: string) => {
+    setMantra(newMantra)
+    localStorage.setItem('habit-mantra', newMantra)
+  }
+
+  const toggleMantraLock = () => {
+    const newLocked = !isMantraLocked
+    setIsMantraLocked(newLocked)
+    localStorage.setItem('habit-mantra-locked', String(newLocked))
+    if (newLocked) setIsEditingMantra(false)
+  }
+
+  const supabase = useMemo(() => createClient(), [])
+
+  const userId = user?.id
 
   const fetchHabits = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setHabits([])
       setLoading(false)
       return
@@ -44,7 +72,7 @@ export default function HabitTracker() {
       const { data, error } = await supabase
         .from('habits')
         .select('*, entries:habit_entries(*)')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('archived', false)
         .order('created_at', { ascending: true })
 
@@ -65,7 +93,7 @@ export default function HabitTracker() {
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [userId, supabase])
 
   useEffect(() => {
     fetchHabits()
@@ -307,6 +335,71 @@ export default function HabitTracker() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* Mantra Section */}
+        {user && (
+          <div className="mb-6">
+            {isEditingMantra ? (
+              <div className="relative">
+                <textarea
+                  value={mantra}
+                  onChange={(e) => handleMantraChange(e.target.value)}
+                  placeholder="Write your mantra..."
+                  autoFocus
+                  className="w-full bg-[var(--card-bg)] border border-[var(--accent-border)] rounded-xl p-4 text-center text-lg font-semibold text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] resize-none"
+                  rows={2}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      setIsEditingMantra(false)
+                    }
+                    if (e.key === 'Escape') {
+                      setIsEditingMantra(false)
+                    }
+                  }}
+                  onBlur={() => setIsEditingMantra(false)}
+                />
+                <p className="text-xs text-[var(--muted-light)] text-center mt-1">
+                  Press Enter to save, Escape to cancel
+                </p>
+              </div>
+            ) : mantra ? (
+              <div className="group relative bg-gradient-to-r from-[var(--accent-bg)] to-transparent border border-[var(--accent-border)] rounded-xl p-4">
+                <p className="text-center text-lg font-bold text-[var(--foreground)] italic">
+                  &ldquo;{mantra}&rdquo;
+                </p>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {!isMantraLocked && (
+                    <button
+                      onClick={() => setIsEditingMantra(true)}
+                      className="p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] rounded-lg transition-colors"
+                      title="Edit mantra"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={toggleMantraLock}
+                    className="p-1.5 text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] rounded-lg transition-colors"
+                    title={isMantraLocked ? 'Unlock to edit' : 'Lock mantra'}
+                  >
+                    {isMantraLocked ? <Lock size={14} /> : <Unlock size={14} />}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsMantraLocked(false)
+                  setIsEditingMantra(true)
+                }}
+                className="w-full border border-dashed border-[var(--card-border)] hover:border-[var(--accent-border)] rounded-xl p-4 text-[var(--muted)] hover:text-[var(--accent-text)] transition-colors"
+              >
+                + Add your mantra
+              </button>
+            )}
+          </div>
+        )}
+
         {/* User Profile Section */}
         {!authLoading && user && profile && (
           <div className="mb-6">

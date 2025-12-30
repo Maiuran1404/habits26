@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Users, UserPlus, X, Check, Heart, Mail, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -57,10 +57,11 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   const [inviteSuccess, setInviteSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const userId = user?.id
 
-  const fetchPartners = async () => {
-    if (!user) {
+  const fetchPartners = useCallback(async () => {
+    if (!userId) {
       setPartners([])
       setLoading(false)
       return
@@ -79,7 +80,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       const { data: partnerships, error: partnershipError } = await supabase
         .from('partnerships')
         .select('*')
-        .or(`user_id.eq.${user.id},partner_id.eq.${user.id}`)
+        .or(`user_id.eq.${userId},partner_id.eq.${userId}`)
         .eq('status', 'accepted')
 
       if (partnershipError) {
@@ -98,7 +99,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       }
 
       const partnerIds = partnerships.map((p: Partnership) =>
-        p.user_id === user.id ? p.partner_id : p.user_id
+        p.user_id === userId ? p.partner_id : p.user_id
       )
 
       const { data: profiles } = await supabase
@@ -113,7 +114,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         .eq('archived', false)
 
       const partnerData: PartnerData[] = partnerships.map((partnership: Partnership) => {
-        const partnerId = partnership.user_id === user.id
+        const partnerId = partnership.user_id === userId
           ? partnership.partner_id
           : partnership.user_id
         const profile = profiles?.find((p: Profile) => p.id === partnerId)
@@ -135,10 +136,10 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, supabase])
 
-  const fetchPendingRequests = async () => {
-    if (!user) {
+  const fetchPendingRequests = useCallback(async () => {
+    if (!userId) {
       setPendingRequests([])
       return
     }
@@ -147,7 +148,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       const { data, error } = await supabase
         .from('partnerships')
         .select('*')
-        .eq('partner_id', user.id)
+        .eq('partner_id', userId)
         .eq('status', 'pending')
 
       if (error) {
@@ -160,10 +161,10 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       console.error('Error fetching pending requests:', err)
       setPendingRequests([])
     }
-  }
+  }, [userId, supabase])
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchPartners()
       fetchPendingRequests()
     } else {
@@ -171,7 +172,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       setPendingRequests([])
       setLoading(false)
     }
-  }, [user, quarter, year])
+  }, [userId, quarter, year, fetchPartners, fetchPendingRequests])
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -525,7 +526,7 @@ function PendingRequestCard({
 }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -539,11 +540,11 @@ function PendingRequestCard({
       setLoading(false)
     }
     fetchProfile()
-  }, [request.user_id])
+  }, [request.user_id, supabase])
 
   if (loading) {
     return (
-      <div className="bg-[var(--card-bg)] border border-purple-500/20 rounded-xl p-4 animate-pulse">
+      <div className="bg-[var(--card-bg)] border border-[var(--accent-border)] rounded-xl p-4 animate-pulse">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-[var(--card-border)]" />
           <div>
@@ -558,16 +559,16 @@ function PendingRequestCard({
   if (!profile) return null
 
   return (
-    <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4 flex items-center justify-between">
+    <div className="bg-[var(--accent-bg)] border border-[var(--accent-border)] rounded-xl p-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-medium">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-700)] flex items-center justify-center text-white font-medium">
           {profile.display_name?.[0]?.toUpperCase() || profile.email[0].toUpperCase()}
         </div>
         <div>
           <div className="font-medium text-[var(--foreground)]">
             {profile.display_name || profile.email.split('@')[0]}
           </div>
-          <div className="text-xs text-purple-400">Wants to be friends</div>
+          <div className="text-xs text-[var(--accent-text)]">Wants to be friends</div>
         </div>
       </div>
       <div className="flex gap-2">
@@ -580,7 +581,7 @@ function PendingRequestCard({
         </button>
         <button
           onClick={onAccept}
-          className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 rounded-lg transition-colors"
+          className="p-2 text-[var(--accent-text)] hover:text-[var(--accent-text-light)] hover:bg-[var(--accent-bg-hover)] rounded-lg transition-colors"
           title="Accept"
         >
           <Check size={18} />
