@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { X, Mail, Lock, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -15,7 +15,7 @@ export default function AuthModal() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   if (!showAuthModal) return null
 
@@ -25,28 +25,41 @@ export default function AuthModal() {
     setError(null)
     setMessage(null)
 
+    // Timeout wrapper to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out. Please try again.')), 10000)
+    )
+
     try {
       if (isSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              display_name: displayName || email.split('@')[0],
+        const result = await Promise.race([
+          supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                display_name: displayName || email.split('@')[0],
+              },
             },
-          },
-        })
-        if (error) throw error
+          }),
+          timeoutPromise,
+        ]) as { data: { session: unknown } | null; error: Error | null }
+
+        if (result.error) throw result.error
         // Auto-login: if session exists, user is logged in immediately
-        if (data.session) {
+        if (result.data?.session) {
           setShowAuthModal(false)
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (error) throw error
+        const result = await Promise.race([
+          supabase.auth.signInWithPassword({
+            email,
+            password,
+          }),
+          timeoutPromise,
+        ]) as { error: Error | null }
+
+        if (result.error) throw result.error
         setShowAuthModal(false)
       }
     } catch (err) {
