@@ -227,9 +227,9 @@ export default function HabitTracker() {
       return
     }
 
-    // Revert on error - check for actual error message
-    if (error?.message) {
-      console.error('Error updating entry:', error)
+    // Revert on error
+    if (error) {
+      console.error('Error updating entry:', error.message || error.code || error)
       fetchHabits()
     }
   }, [user, habits, supabase, fetchHabits])
@@ -267,8 +267,8 @@ export default function HabitTracker() {
       .update({ note })
       .eq('id', existingEntry.id)
 
-    if (error?.message) {
-      console.error('Error updating note:', error)
+    if (error) {
+      console.error('Error updating note:', error.message || error.code || error)
       fetchHabits()
     }
   }, [user, habits, supabase, fetchHabits])
