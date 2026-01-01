@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil, Flame, Calendar } from 'lucide-react'
+import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil, Flame, Calendar, User } from 'lucide-react'
 import { format, getDayOfYear, startOfQuarter, differenceInDays, parseISO, subDays, startOfWeek, endOfWeek } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
@@ -14,6 +14,7 @@ import GoalsSection from './GoalsSection'
 
 // Lazy load components that aren't immediately visible
 const HabitModal = dynamic(() => import('./HabitModal'), { ssr: false })
+const ProfileModal = dynamic(() => import('./ProfileModal'), { ssr: false })
 const PartnerSection = dynamic(() => import('./PartnerSection'), { ssr: false })
 const MonthlyComparison = dynamic(() => import('./MonthlyComparison'), { ssr: false })
 const QuarterlyComparison = dynamic(() => import('./QuarterlyComparison'), { ssr: false })
@@ -27,6 +28,7 @@ export default function HabitTracker() {
   const [showHabitModal, setShowHabitModal] = useState(false)
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   // Mantra state
   const [mantra, setMantra] = useState('')
@@ -515,12 +517,23 @@ export default function HabitTracker() {
                           onClick={() => setShowSettings(false)}
                         />
                         <div className="absolute right-0 top-full mt-2 z-50 overflow-hidden min-w-[200px] rounded-2xl border border-[var(--glass-border)] shadow-lg" style={{ background: 'var(--background)' }}>
-                          <div className="px-4 py-3 border-b border-[var(--card-border)]">
-                            <p className="text-sm font-medium text-[var(--foreground)]">
-                              {profile?.display_name || user.email?.split('@')[0]}
-                            </p>
-                            <p className="text-xs text-[var(--muted-light)]">{user.email}</p>
-                          </div>
+                          <button
+                            onClick={() => {
+                              setShowProfileModal(true)
+                              setShowSettings(false)
+                            }}
+                            className="w-full px-4 py-3 border-b border-[var(--card-border)] hover:bg-[var(--accent-bg)] transition-colors text-left"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-[var(--foreground)]">
+                                  {profile?.display_name || user.email?.split('@')[0]}
+                                </p>
+                                <p className="text-xs text-[var(--muted-light)]">{user.email}</p>
+                              </div>
+                              <User size={14} className="text-[var(--muted-light)]" />
+                            </div>
+                          </button>
                           {/* Mantra lock toggle in settings */}
                           {mantra && (
                             <button
@@ -784,6 +797,12 @@ export default function HabitTracker() {
         }}
         onSave={handleSaveHabit}
         habit={editingHabit}
+      />
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
       />
     </div>
   )

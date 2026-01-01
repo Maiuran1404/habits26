@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { TrendingUp, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { TrendingUp, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Profile, HabitWithEntries, Partnership, Quarter, getQuarterDates } from '@/types/database'
@@ -164,6 +164,7 @@ export default function QuarterlyComparison({ quarter: initialQuarter, year: ini
   const [loading, setLoading] = useState(true)
   const [currentQuarter, setCurrentQuarter] = useState<Quarter>(initialQuarter)
   const [currentYear, setCurrentYear] = useState(initialYear)
+  const [isCollapsed, setIsCollapsed] = useState(true)
 
   const supabase = useMemo(() => createClient(), [])
   const userId = user?.id
@@ -348,14 +349,22 @@ export default function QuarterlyComparison({ quarter: initialQuarter, year: ini
   return (
     <div className="glass-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-[var(--card-border)]">
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="w-full flex items-center justify-between p-3 border-b border-[var(--card-border)] hover:bg-[var(--card-bg)]/50 transition-colors"
+      >
         <div className="flex items-center gap-2">
           <TrendingUp size={14} className="text-[var(--accent-500)]" />
           <span className="text-sm font-medium text-[var(--foreground)]">Quarterly Comparison</span>
         </div>
-      </div>
+        {isCollapsed ? (
+          <ChevronDown size={16} className="text-[var(--muted)]" />
+        ) : (
+          <ChevronUp size={16} className="text-[var(--muted)]" />
+        )}
+      </button>
 
-      <div className="p-3">
+      {!isCollapsed && <div className="p-3">
         {loading ? (
           <div className="flex justify-center py-6">
             <Loader2 size={20} className="animate-spin text-[var(--muted)]" />
@@ -451,6 +460,7 @@ export default function QuarterlyComparison({ quarter: initialQuarter, year: ini
           </div>
         )}
       </div>
+      }
     </div>
   )
 }
