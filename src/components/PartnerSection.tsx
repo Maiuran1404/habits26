@@ -365,7 +365,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
                             {index + 1}
                           </span>
                           <span className={`text-sm font-medium ${isMe ? 'text-[var(--accent-text)]' : 'text-[var(--foreground)]'}`}>
-                            {isMe ? 'You' : userData.displayName}
+                            {userData.displayName}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -525,7 +525,7 @@ function UserComparisonCard({
     return (
       <div className={`bg-[var(--card-bg)] rounded-xl p-4 min-w-[280px] flex-shrink-0 border ${isCurrentUser ? 'border-[var(--accent-500)]/40' : 'border-[var(--card-border)]'}`}>
         <h3 className="text-base font-bold text-[var(--foreground)] text-center mb-1">
-          {isCurrentUser ? 'You' : userData.displayName}
+          {userData.displayName}
         </h3>
         <p className="text-xs text-[var(--muted)] text-center">No habits tracked</p>
       </div>
@@ -536,7 +536,7 @@ function UserComparisonCard({
     <div className={`bg-[var(--card-bg)] rounded-xl p-4 min-w-[280px] flex-shrink-0 border ${isCurrentUser ? 'border-[var(--accent-500)]/40' : 'border-[var(--card-border)]'}`}>
       {/* User Name */}
       <h3 className="text-base font-bold text-[var(--foreground)] text-center mb-1">
-        {isCurrentUser ? 'You' : userData.displayName}
+        {userData.displayName}
       </h3>
 
       {/* Total Completion */}
