@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Users, Loader2, Check, ChevronLeft, ChevronRight, UserPlus, X } from 'lucide-react'
+import { Users, Loader2, Check, ChevronLeft, ChevronRight, UserPlus, X, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { Profile, HabitWithEntries, Quarter, Partnership } from '@/types/database'
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, isSameWeek } from 'date-fns'
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, isSameWeek, isAfter } from 'date-fns'
+import { getWeekDays, calculateUserWeeklyData, UserWeeklyData, DayColumnData } from '@/lib/weeklyCalculations'
 
 interface PartnerSectionProps {
   quarter: Quarter
@@ -16,34 +17,6 @@ interface PartnerData {
   partnership: Partnership
   profile: Profile
   habits: HabitWithEntries[]
-}
-
-// Calculate weekly progress for habits
-function calculateWeekProgress(habits: HabitWithEntries[], weekStart: Date): { completed: number; total: number; percentage: number } {
-  if (habits.length === 0) return { completed: 0, total: 0, percentage: 0 }
-
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-  const today = new Date()
-  const effectiveEnd = weekEnd > today ? today : weekEnd
-
-  if (weekStart > today) return { completed: 0, total: 0, percentage: 0 }
-
-  const daysInRange = eachDayOfInterval({ start: weekStart, end: effectiveEnd })
-  let totalCompleted = 0
-  let totalPossible = 0
-
-  habits.forEach(habit => {
-    const completed = habit.entries.filter(
-      (e) => e.status === 'done' &&
-        e.date >= format(weekStart, 'yyyy-MM-dd') &&
-        e.date <= format(effectiveEnd, 'yyyy-MM-dd')
-    ).length
-    totalCompleted += completed
-    totalPossible += daysInRange.length
-  })
-
-  const percentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0
-  return { completed: totalCompleted, total: totalPossible, percentage }
 }
 
 export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
@@ -62,7 +35,6 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
   const supabase = useMemo(() => createClient(), [])
   const userId = user?.id
 
-  // Fetch user's own habits
   const [myHabits, setMyHabits] = useState<HabitWithEntries[]>([])
 
   const fetchMyHabits = useCallback(async () => {
@@ -265,10 +237,38 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
   const isCurrentWeek = isSameWeek(currentWeekStart, new Date(), { weekStartsOn: 1 })
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 })
-  const weekDays = eachDayOfInterval({ start: currentWeekStart, end: weekEnd })
+  const weekDays = useMemo(() => getWeekDays(currentWeekStart), [currentWeekStart])
 
-  // Calculate progress for current week
-  const myProgress = useMemo(() => calculateWeekProgress(myHabits, currentWeekStart), [myHabits, currentWeekStart])
+  // Calculate weekly data for current user and partners
+  const myWeeklyData = useMemo(() =>
+    calculateUserWeeklyData(
+      userId || '',
+      userProfile?.display_name || user?.email?.split('@')[0] || 'You',
+      user?.email || '',
+      myHabits,
+      weekDays
+    ),
+    [userId, userProfile, user, myHabits, weekDays]
+  )
+
+  const partnersWeeklyData = useMemo(() =>
+    partners.map(partner =>
+      calculateUserWeeklyData(
+        partner.profile.id,
+        partner.profile.display_name || partner.profile.email.split('@')[0],
+        partner.profile.email,
+        partner.habits,
+        weekDays
+      )
+    ),
+    [partners, weekDays]
+  )
+
+  // Combine all users and sort by percentage for leaderboard
+  const allUsersData = useMemo(() => {
+    const all = [myWeeklyData, ...partnersWeeklyData]
+    return all.sort((a, b) => b.weeklyPercentage - a.weeklyPercentage)
+  }, [myWeeklyData, partnersWeeklyData])
 
   if (!user) return null
 
@@ -314,8 +314,7 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
               </button>
             </div>
           ) : (
-            /* Weekly Comparison View */
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Week Navigation */}
               <div className="flex items-center justify-between">
                 <button
@@ -346,136 +345,40 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
                 </button>
               </div>
 
-              {/* Comparison Grid */}
-              <div className="overflow-x-auto -mx-3 px-3">
-                <div className="min-w-fit">
-                  {/* Header Row - Days of Week */}
-                  <div className="flex gap-1 mb-2">
-                    <div className="w-20 flex-shrink-0" />
-                    {weekDays.map((day) => (
+              {/* Weekly Leaderboard */}
+              <div className="bg-[var(--card-bg)] rounded-xl p-3">
+                <h3 className="text-sm font-semibold text-[var(--foreground)] text-center mb-3">
+                  Weekly Leaderboard
+                </h3>
+                <div className="space-y-2">
+                  {allUsersData.map((userData, index) => {
+                    const isMe = userData.userId === userId
+                    return (
                       <div
-                        key={day.toISOString()}
-                        className={`w-9 h-6 flex items-center justify-center text-[10px] font-medium ${
-                          format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                            ? 'text-[var(--accent-text)]'
-                            : 'text-[var(--muted)]'
+                        key={userData.userId}
+                        className={`flex items-center justify-between py-2 px-3 rounded-lg ${
+                          isMe ? 'bg-[var(--accent-500)]/10' : ''
                         }`}
                       >
-                        {format(day, 'EEE')[0]}
-                      </div>
-                    ))}
-                    <div className="w-14 flex-shrink-0 text-[10px] text-[var(--muted)] text-right pr-1">
-                      Score
-                    </div>
-                  </div>
-
-                  {/* My Progress Row */}
-                  <div className="flex gap-1 items-center mb-1.5 p-2 rounded-xl bg-[var(--accent-500)]/10 border border-[var(--accent-500)]/20">
-                    <div className="w-20 flex-shrink-0 flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--accent-500)] to-[var(--accent-600)] flex items-center justify-center text-white text-xs font-medium">
-                        {userProfile?.display_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase()}
-                      </div>
-                      <span className="text-xs font-medium text-[var(--foreground)]">You</span>
-                    </div>
-                    {weekDays.map((day) => {
-                      const dayStr = format(day, 'yyyy-MM-dd')
-                      const today = new Date()
-                      const isFuture = day > today
-                      const isToday = format(day, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-
-                      const completedCount = myHabits.filter(habit =>
-                        habit.entries.some(e => e.date === dayStr && e.status === 'done')
-                      ).length
-                      const totalHabits = myHabits.length
-                      const allDone = totalHabits > 0 && completedCount === totalHabits
-                      const someDone = completedCount > 0
-
-                      return (
-                        <div
-                          key={day.toISOString()}
-                          className={`
-                            w-9 h-9 rounded-lg flex items-center justify-center text-xs font-semibold transition-all
-                            ${isFuture
-                              ? 'bg-[var(--card-border)]/30'
-                              : allDone
-                                ? 'bg-[var(--accent-500)] text-white shadow-sm'
-                                : someDone
-                                  ? 'bg-[var(--accent-500)]/30 text-[var(--accent-600)]'
-                                  : 'bg-[var(--card-bg)] text-[var(--muted-light)]'
-                            }
-                            ${isToday ? 'ring-2 ring-[var(--accent-500)] ring-offset-1 ring-offset-[var(--background)]' : ''}
-                          `}
-                          title={`${completedCount}/${totalHabits} habits`}
-                        >
-                          {!isFuture && totalHabits > 0 ? completedCount : ''}
-                        </div>
-                      )
-                    })}
-                    <div className="w-14 flex-shrink-0 text-right pr-1">
-                      <span className={`text-sm font-bold ${myProgress.percentage >= 70 ? 'text-[var(--accent-500)]' : 'text-[var(--foreground)]'}`}>
-                        {myProgress.percentage}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Partner Rows */}
-                  {partners.map((partner, index) => {
-                    const partnerProgress = calculateWeekProgress(partner.habits, currentWeekStart)
-                    const colors = ['blue', 'purple', 'orange', 'pink', 'cyan']
-                    const color = colors[index % colors.length]
-
-                    return (
-                      <div key={partner.partnership.id} className="flex gap-1 items-center mb-1.5 p-2 rounded-xl hover:bg-[var(--card-bg)]/50 transition-colors">
-                        <div className="w-20 flex-shrink-0 flex items-center gap-2">
-                          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br from-${color}-500 to-${color}-600 flex items-center justify-center text-white text-xs font-medium`}
-                            style={{
-                              background: `linear-gradient(to bottom right, var(--${color}-500, #3b82f6), var(--${color}-600, #2563eb))`
-                            }}
-                          >
-                            {partner.profile.display_name?.[0]?.toUpperCase() || partner.profile.email[0].toUpperCase()}
-                          </div>
-                          <span className="text-xs font-medium text-[var(--foreground)] truncate max-w-[48px]">
-                            {partner.profile.display_name || partner.profile.email.split('@')[0]}
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-medium text-[var(--muted)] w-4">
+                            {index + 1}
+                          </span>
+                          <span className={`text-sm font-medium ${isMe ? 'text-[var(--accent-text)]' : 'text-[var(--foreground)]'}`}>
+                            {isMe ? 'You' : userData.displayName}
                           </span>
                         </div>
-                        {weekDays.map((day) => {
-                          const dayStr = format(day, 'yyyy-MM-dd')
-                          const today = new Date()
-                          const isFuture = day > today
-                          const isToday = format(day, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
-
-                          const completedCount = partner.habits.filter(habit =>
-                            habit.entries.some(e => e.date === dayStr && e.status === 'done')
-                          ).length
-                          const totalHabits = partner.habits.length
-                          const allDone = totalHabits > 0 && completedCount === totalHabits
-                          const someDone = completedCount > 0
-
-                          return (
-                            <div
-                              key={day.toISOString()}
-                              className={`
-                                w-9 h-9 rounded-lg flex items-center justify-center text-xs font-semibold transition-all
-                                ${isFuture
-                                  ? 'bg-[var(--card-border)]/30'
-                                  : allDone
-                                    ? 'bg-blue-500 text-white shadow-sm'
-                                    : someDone
-                                      ? 'bg-blue-500/30 text-blue-600'
-                                      : 'bg-[var(--card-bg)] text-[var(--muted-light)]'
-                                }
-                                ${isToday ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-[var(--background)]' : ''}
-                              `}
-                              title={`${completedCount}/${totalHabits} habits`}
-                            >
-                              {!isFuture && totalHabits > 0 ? completedCount : ''}
-                            </div>
-                          )
-                        })}
-                        <div className="w-14 flex-shrink-0 text-right pr-1">
-                          <span className={`text-sm font-bold ${partnerProgress.percentage >= 70 ? 'text-blue-500' : 'text-[var(--foreground)]'}`}>
-                            {partnerProgress.percentage}%
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${
+                            userData.weeklyPercentage >= 80 ? 'text-emerald-500' :
+                            userData.weeklyPercentage >= 60 ? 'text-amber-500' :
+                            'text-[var(--foreground)]'
+                          }`}>
+                            {userData.weeklyPercentage}%
                           </span>
+                          {index === 0 && <span className="text-lg">🏆</span>}
+                          {index === 1 && <span className="text-lg">🥈</span>}
+                          {index === 2 && <span className="text-lg">🥉</span>}
                         </div>
                       </div>
                     )
@@ -483,20 +386,19 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
                 </div>
               </div>
 
-              {/* Legend */}
-              <div className="flex items-center justify-center gap-4 pt-2 border-t border-[var(--card-border)]">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-[var(--accent-500)]" />
-                  <span className="text-[10px] text-[var(--muted)]">All done</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-[var(--accent-500)]/30" />
-                  <span className="text-[10px] text-[var(--muted)]">Partial</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded bg-[var(--card-bg)] border border-[var(--card-border)]" />
-                  <span className="text-[10px] text-[var(--muted)]">None</span>
-                </div>
+              {/* User Cards - Vertical Stack */}
+              <div className="space-y-4">
+                {allUsersData.map((userData) => {
+                  const isMe = userData.userId === userId
+                  return (
+                    <UserComparisonCard
+                      key={userData.userId}
+                      userData={userData}
+                      weekDays={weekDays}
+                      isCurrentUser={isMe}
+                    />
+                  )
+                })}
               </div>
             </div>
           )}
@@ -604,5 +506,124 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
         </div>
       )}
     </>
+  )
+}
+
+// User Comparison Card Component
+function UserComparisonCard({
+  userData,
+  weekDays,
+  isCurrentUser
+}: {
+  userData: UserWeeklyData
+  weekDays: DayColumnData[]
+  isCurrentUser: boolean
+}) {
+  if (userData.habits.length === 0) {
+    return (
+      <div className={`bg-[var(--card-bg)] rounded-xl p-4 ${isCurrentUser ? 'ring-1 ring-[var(--accent-500)]/30' : ''}`}>
+        <h3 className="text-base font-bold text-[var(--foreground)] text-center mb-1">
+          {isCurrentUser ? 'You' : userData.displayName}
+        </h3>
+        <p className="text-xs text-[var(--muted)] text-center">No habits tracked</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`bg-[var(--card-bg)] rounded-xl p-4 ${isCurrentUser ? 'ring-1 ring-[var(--accent-500)]/30' : ''}`}>
+      {/* User Name */}
+      <h3 className="text-base font-bold text-[var(--foreground)] text-center mb-1">
+        {isCurrentUser ? 'You' : userData.displayName}
+      </h3>
+
+      {/* Total Completion */}
+      <p className="text-xs text-[var(--muted)] text-center mb-1">
+        Total Completion this week:
+      </p>
+      <p className={`text-2xl font-bold text-center mb-4 ${
+        userData.weeklyPercentage >= 80 ? 'text-emerald-500' :
+        userData.weeklyPercentage >= 60 ? 'text-amber-500' :
+        'text-[var(--foreground)]'
+      }`}>
+        {userData.weeklyPercentage}%
+      </p>
+
+      {/* Completion Per Habit Label */}
+      <p className="text-xs text-[var(--muted)] text-center mb-3 border-t border-[var(--card-border)] pt-3">
+        Completion Per Habit:
+      </p>
+
+      {/* Habits Grid - Horizontal Layout */}
+      <div className="overflow-x-auto -mx-2 px-2">
+        <div className="flex justify-center gap-4 min-w-fit">
+          {userData.habits.map((habitData) => {
+            const doneCount = habitData.weeklyDoneCount
+            const targetDays = weekDays.filter(d => !d.isFuture).length
+            const percentage = targetDays > 0 ? Math.round((doneCount / targetDays) * 100) : 0
+
+            return (
+              <div key={habitData.habit.id} className="flex flex-col items-center min-w-[60px]">
+                {/* Habit Name */}
+                <span className="text-[10px] font-medium text-[var(--foreground)] text-center truncate max-w-[70px] mb-1">
+                  {habitData.habit.name}
+                </span>
+
+                {/* Completion Ratio */}
+                <span className="text-xs font-semibold text-[var(--foreground)]">
+                  {doneCount}/{targetDays}
+                </span>
+
+                {/* Percentage */}
+                <span className={`text-[10px] font-medium mb-2 ${
+                  percentage >= 80 ? 'text-emerald-500' :
+                  percentage >= 60 ? 'text-amber-500' :
+                  'text-[var(--muted)]'
+                }`}>
+                  {percentage}%
+                </span>
+
+                {/* Vertical Dots - One per day */}
+                <div className="flex flex-col gap-1">
+                  {weekDays.map((day) => {
+                    const entry = habitData.dailyEntries.get(day.dateStr)
+                    let dotColor = 'bg-gray-300 dark:bg-gray-600' // default/empty/future
+
+                    if (!day.isFuture) {
+                      if (entry?.status === 'done') {
+                        dotColor = 'bg-emerald-500'
+                      } else if (entry?.status === 'missed') {
+                        dotColor = 'bg-red-500'
+                      } else if (entry?.status === 'skipped') {
+                        dotColor = 'bg-gray-400'
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={day.dateStr}
+                        className={`w-4 h-4 rounded-full ${dotColor} ${day.isToday ? 'ring-2 ring-offset-1 ring-[var(--accent-500)]' : ''}`}
+                        title={`${format(day.date, 'EEE')}: ${entry?.status || (day.isFuture ? 'upcoming' : 'not tracked')}`}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Day Labels */}
+      <div className="flex justify-center gap-4 mt-2 pt-2 border-t border-[var(--card-border)]/50">
+        <div className="flex flex-col items-center text-[8px] text-[var(--muted)]">
+          {weekDays.map((day) => (
+            <span key={day.dateStr} className={`h-5 flex items-center ${day.isToday ? 'font-bold text-[var(--accent-text)]' : ''}`}>
+              {format(day.date, 'EEE')[0]}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }

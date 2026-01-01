@@ -7,7 +7,7 @@ import { Habit } from '@/types/database'
 interface HabitModalProps {
   isOpen: boolean
   onClose: () => void
-  onSave: (habit: { name: string; description: string; color: string; target_per_week: number }) => Promise<void>
+  onSave: (habit: { name: string; description: string; color: string; target_per_week: number; goal_metric: string | null }) => Promise<void>
   habit?: Habit | null
 }
 
@@ -36,6 +36,7 @@ export default function HabitModal({
 }: HabitModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [goalMetric, setGoalMetric] = useState('')
   const [color, setColor] = useState(colorOptions[0])
   const [targetPerWeek, setTargetPerWeek] = useState(7)
   const [loading, setLoading] = useState(false)
@@ -45,11 +46,13 @@ export default function HabitModal({
     if (habit) {
       setName(habit.name)
       setDescription(habit.description || '')
+      setGoalMetric(habit.goal_metric || '')
       setColor(habit.color)
       setTargetPerWeek(habit.target_per_week || 7)
     } else {
       setName('')
       setDescription('')
+      setGoalMetric('')
       setColor(colorOptions[0])
       setTargetPerWeek(7)
     }
@@ -66,7 +69,7 @@ export default function HabitModal({
     setError(null)
 
     try {
-      await onSave({ name: name.trim(), description: description.trim(), color, target_per_week: targetPerWeek })
+      await onSave({ name: name.trim(), description: description.trim(), color, target_per_week: targetPerWeek, goal_metric: goalMetric.trim() || null })
       onClose()
     } catch (err) {
       console.error('Failed to save habit:', err)
@@ -126,6 +129,19 @@ export default function HabitModal({
               placeholder="What does this habit involve?"
               rows={2}
               className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl py-2.5 px-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors resize-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[var(--muted)] mb-1.5 uppercase tracking-wide">
+              Goal Metric <span className="text-[var(--muted-light)] normal-case">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={goalMetric}
+              onChange={(e) => setGoalMetric(e.target.value)}
+              placeholder="e.g., 10k steps, 7hrs sleep, 2hr work"
+              className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl py-2.5 px-4 text-[var(--foreground)] placeholder-[var(--muted-light)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors text-sm"
             />
           </div>
 

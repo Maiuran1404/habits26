@@ -15,7 +15,12 @@ export interface Habit {
   target_per_week: number
   created_at: string
   archived: boolean
+  goal_metric: string | null
 }
+
+// Points calculation constants
+export const POINTS_PER_DONE = 3
+export const MAX_POINTS_PER_HABIT_PER_WEEK = 21 // 7 days * 3 points
 
 export interface HabitEntry {
   id: string

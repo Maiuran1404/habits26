@@ -274,6 +274,7 @@ export default function HabitTracker() {
     description: string
     color: string
     target_per_week: number
+    goal_metric: string | null
   }) => {
     if (!user) throw new Error('You must be logged in')
 
@@ -306,6 +307,7 @@ export default function HabitTracker() {
         description: habitData.description,
         color: habitData.color,
         target_per_week: habitData.target_per_week,
+        goal_metric: habitData.goal_metric,
         created_at: new Date().toISOString(),
         archived: false,
         entries: [],
