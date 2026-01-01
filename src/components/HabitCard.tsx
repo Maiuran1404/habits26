@@ -4,7 +4,7 @@ import { useMemo, memo, useState, useRef, useEffect } from 'react'
 import { Trash2, Edit2, Check, MessageSquare } from 'lucide-react'
 import { HabitWithEntries, HabitEntry, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
-import { format, eachDayOfInterval, subDays, parseISO, startOfWeek, endOfWeek } from 'date-fns'
+import { format, eachDayOfInterval, subDays, parseISO, startOfWeek, endOfWeek, addDays } from 'date-fns'
 
 interface HabitCardProps {
   habit: HabitWithEntries
@@ -72,7 +72,7 @@ function DayButton({
   return (
     <div className="group flex flex-col items-center gap-0.5">
       {/* Day label */}
-      <span className={`text-[9px] font-medium ${isToday ? 'text-[var(--foreground)]' : 'text-[var(--muted-light)]'}`}>
+      <span className={`text-[9px] font-semibold ${isToday ? 'text-[var(--foreground)]' : 'text-[var(--muted-light)]'}`}>
         {label}
       </span>
 
@@ -89,7 +89,7 @@ function DayButton({
             ${isAnimating ? 'scale-90' : 'scale-100 hover:scale-110'}
             ${isDone || isSkipped || isMissed
               ? 'shadow-sm'
-              : 'border-2 border-[var(--card-border)] group-hover:border-[var(--accent-400)] bg-[var(--card-bg)] group-hover:bg-[var(--accent-bg)]'
+              : 'border-2 border-[var(--muted-light)]/30 group-hover:border-[var(--accent-400)] bg-[var(--muted-light)]/10 group-hover:bg-[var(--accent-bg)]'
             }
           `}
           style={{
@@ -132,8 +132,8 @@ function DayButton({
   )
 }
 
-// Recent days selector (today + past 3 days)
-function RecentDaysSelector({
+// Full week row showing all 7 days (Monday to Sunday)
+function FullWeekRow({
   entries,
   color,
   targetPerWeek,
@@ -144,65 +144,44 @@ function RecentDaysSelector({
   targetPerWeek: number
   onDayClick: (date: string) => void
 }) {
-  // Calculate allowed rest days per week
   const allowedRestDays = 7 - targetPerWeek
+  const dayLabels = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
 
-  const recentDays = useMemo(() => {
+  const weekDays = useMemo(() => {
     const today = new Date()
-    const days = []
+    const todayStr = format(today, 'yyyy-MM-dd')
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 })
 
-    for (let i = 3; i >= 0; i--) {
-      const date = subDays(today, i)
+    return dayLabels.map((label, index) => {
+      const date = addDays(weekStart, index)
       const dateStr = format(date, 'yyyy-MM-dd')
-      const dayOfWeek = format(date, 'EEE').toUpperCase().slice(0, 2)
-
-      let label: string
-      if (i === 0) {
-        label = 'TODAY'
-      } else if (i === 1) {
-        label = 'YST'
-      } else {
-        label = dayOfWeek
-      }
-
-      days.push({
+      return {
         date: dateStr,
         dateObj: date,
         label,
-        isToday: i === 0,
-      })
-    }
-
-    return days
+        isToday: dateStr === todayStr,
+      }
+    })
   }, [])
 
-  const getEntry = (date: string) => {
-    return entries.find(e => e.date === date)
-  }
+  const getEntry = (date: string) => entries.find(e => e.date === date)
 
-  // Calculate if skipping is allowed for a specific date
-  const canSkipForDate = (dateStr: string, dateObj: Date) => {
+  const canSkipForDate = (dateStr: string) => {
     if (allowedRestDays <= 0) return false
-
-    const weekStartDate = startOfWeek(dateObj, { weekStartsOn: 1 })
-    const weekEndDate = endOfWeek(dateObj, { weekStartsOn: 1 })
-    const weekStartStr = format(weekStartDate, 'yyyy-MM-dd')
-    const weekEndStr = format(weekEndDate, 'yyyy-MM-dd')
-
-    // Count existing skipped entries in this week (excluding the current day)
+    const weekStartStr = weekDays[0].date
+    const weekEndStr = weekDays[6].date
     const skippedInWeek = entries.filter(e =>
       e.status === 'skipped' &&
       e.date >= weekStartStr &&
       e.date <= weekEndStr &&
       e.date !== dateStr
     ).length
-
     return skippedInWeek < allowedRestDays
   }
 
   return (
-    <div className="flex items-end gap-1">
-      {recentDays.map((day) => (
+    <div className="flex items-center justify-between gap-1">
+      {weekDays.map((day) => (
         <DayButton
           key={day.date}
           date={day.date}
@@ -210,7 +189,7 @@ function RecentDaysSelector({
           entry={getEntry(day.date)}
           color={color}
           isToday={day.isToday}
-          canSkip={canSkipForDate(day.date, day.dateObj)}
+          canSkip={canSkipForDate(day.date)}
           onClick={onDayClick}
         />
       ))}
@@ -260,6 +239,29 @@ const HabitCard = memo(function HabitCard({
     }
     setIsEditingNote(false)
   }
+
+  // Calculate weekly score (completed this week vs target)
+  const weeklyScore = useMemo(() => {
+    const today = new Date()
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 }) // Monday
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 }) // Sunday
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd')
+    const weekEndStr = format(weekEnd, 'yyyy-MM-dd')
+
+    const completedThisWeek = habit.entries.filter(
+      (e) => e.status === 'done' &&
+             e.date >= weekStartStr &&
+             e.date <= weekEndStr
+    ).length
+
+    const target = habit.target_per_week ?? 7
+
+    return {
+      completed: completedThisWeek,
+      target,
+      isComplete: completedThisWeek >= target,
+    }
+  }, [habit.entries, habit.target_per_week])
 
   // Calculate streak (consecutive days ending today or yesterday)
   const streak = useMemo(() => {
@@ -324,12 +326,14 @@ const HabitCard = memo(function HabitCard({
     }
   }, [habit.entries, quarter, year])
 
+  // Calculate weekly completion percentage
+  const weeklyPercentage = Math.round((weeklyScore.completed / weeklyScore.target) * 100)
+
   return (
-    <div className="glass-card p-4 transition-all hover:scale-[1.005]">
-      {/* Header: Name + Stats + Day Buttons */}
+    <div className="glass-card p-3 transition-all hover:scale-[1.005]">
+      {/* Header: Name + Frequency */}
       <div className="flex items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {/* Color indicator */}
+        <div className="flex items-center gap-1.5 min-w-0">
           <div
             className="w-2 h-2 rounded-full flex-shrink-0"
             style={{ backgroundColor: habit.color }}
@@ -337,35 +341,55 @@ const HabitCard = memo(function HabitCard({
           <h3 className="font-medium text-[var(--foreground)] text-sm truncate">
             {habit.name}
           </h3>
-          {/* Stats Pills - minimal */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {streak > 0 && (
-              <span className="text-[10px] font-medium text-[var(--accent-text)]">
-                {streak}d
-              </span>
-            )}
-            <span
-              className="text-[10px] font-medium"
-              style={{ color: habit.color }}
-            >
-              {stats.percentage}%
+        </div>
+        <span className="text-[10px] text-[var(--muted)] flex-shrink-0">
+          {habit.target_per_week ?? 7}x/week
+        </span>
+      </div>
+
+      {/* This Week Section - compact row */}
+      {!readonly && onDayClick && (
+        <div className="flex items-center gap-2 mb-3">
+          {/* Week row */}
+          <div className="flex-1">
+            <FullWeekRow
+              entries={habit.entries}
+              color={habit.color}
+              targetPerWeek={habit.target_per_week ?? 7}
+              onDayClick={(date) => onDayClick(habit.id, date)}
+            />
+          </div>
+
+          {/* Completion badge - compact */}
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+              backgroundColor: weeklyScore.isComplete ? habit.color : 'var(--muted-light)',
+              opacity: weeklyScore.isComplete ? 1 : 0.2,
+            }}
+            title={`This week: ${weeklyScore.completed}/${weeklyScore.target}`}
+          >
+            <span className={`text-xs font-bold ${weeklyScore.isComplete ? 'text-white' : 'text-[var(--foreground)]'}`}>
+              {weeklyPercentage}%
             </span>
           </div>
         </div>
+      )}
 
-        {/* Recent Days - Quick toggle for today and past 3 days */}
-        {!readonly && onDayClick && (
-          <RecentDaysSelector
-            entries={habit.entries}
-            color={habit.color}
-            targetPerWeek={habit.target_per_week ?? 7}
-            onDayClick={(date) => onDayClick(habit.id, date)}
-          />
+      {/* Stats row - minimal */}
+      <div className="flex items-center gap-2 mb-2 text-[10px]">
+        {streak > 0 && (
+          <span className="text-[var(--accent-text)]">
+            {streak}d streak
+          </span>
         )}
+        <span className="text-[var(--muted)]">
+          Q: <span className="font-medium" style={{ color: habit.color }}>{stats.percentage}%</span>
+        </span>
       </div>
 
       {/* Calendar Grid */}
-      <div className="mb-3">
+      <div className="mb-2">
         <HabitGrid
           entries={habit.entries}
           color={habit.color}
