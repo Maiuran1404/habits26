@@ -15,6 +15,7 @@ import GoalsSection from './GoalsSection'
 // Lazy load components that aren't immediately visible
 const HabitModal = dynamic(() => import('./HabitModal'), { ssr: false })
 const PartnerSection = dynamic(() => import('./PartnerSection'), { ssr: false })
+const MonthlyComparison = dynamic(() => import('./MonthlyComparison'), { ssr: false })
 
 export default function HabitTracker() {
   const { user, profile, loading: authLoading, setShowAuthModal, signOut } = useAuth()
@@ -768,6 +769,7 @@ export default function HabitTracker() {
 
         {/* Partner Section */}
         {user && <PartnerSection quarter={quarter} year={year} />}
+        {user && <MonthlyComparison quarter={quarter} year={year} />}
         </main>
       </div>
 
