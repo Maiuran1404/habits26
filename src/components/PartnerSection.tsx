@@ -386,19 +386,21 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
                 </div>
               </div>
 
-              {/* User Cards - Vertical Stack */}
-              <div className="space-y-4">
-                {allUsersData.map((userData) => {
-                  const isMe = userData.userId === userId
-                  return (
-                    <UserComparisonCard
-                      key={userData.userId}
-                      userData={userData}
-                      weekDays={weekDays}
-                      isCurrentUser={isMe}
-                    />
-                  )
-                })}
+              {/* User Cards - Horizontal Row */}
+              <div className="overflow-x-auto -mx-3 px-3 pb-2">
+                <div className="flex gap-4 min-w-fit">
+                  {allUsersData.map((userData) => {
+                    const isMe = userData.userId === userId
+                    return (
+                      <UserComparisonCard
+                        key={userData.userId}
+                        userData={userData}
+                        weekDays={weekDays}
+                        isCurrentUser={isMe}
+                      />
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}
@@ -521,7 +523,7 @@ function UserComparisonCard({
 }) {
   if (userData.habits.length === 0) {
     return (
-      <div className={`bg-[var(--card-bg)] rounded-xl p-4 ${isCurrentUser ? 'ring-1 ring-[var(--accent-500)]/30' : ''}`}>
+      <div className={`bg-[var(--card-bg)] rounded-xl p-4 min-w-[280px] flex-shrink-0 border ${isCurrentUser ? 'border-[var(--accent-500)]/40' : 'border-[var(--card-border)]'}`}>
         <h3 className="text-base font-bold text-[var(--foreground)] text-center mb-1">
           {isCurrentUser ? 'You' : userData.displayName}
         </h3>
@@ -531,7 +533,7 @@ function UserComparisonCard({
   }
 
   return (
-    <div className={`bg-[var(--card-bg)] rounded-xl p-4 ${isCurrentUser ? 'ring-1 ring-[var(--accent-500)]/30' : ''}`}>
+    <div className={`bg-[var(--card-bg)] rounded-xl p-4 min-w-[280px] flex-shrink-0 border ${isCurrentUser ? 'border-[var(--accent-500)]/40' : 'border-[var(--card-border)]'}`}>
       {/* User Name */}
       <h3 className="text-base font-bold text-[var(--foreground)] text-center mb-1">
         {isCurrentUser ? 'You' : userData.displayName}
@@ -554,74 +556,84 @@ function UserComparisonCard({
         Completion Per Habit:
       </p>
 
-      {/* Habits Grid - Horizontal Layout */}
+      {/* Habits Header Row - Names and Stats */}
       <div className="overflow-x-auto -mx-2 px-2">
-        <div className="flex justify-center gap-4 min-w-fit">
-          {userData.habits.map((habitData) => {
-            const doneCount = habitData.weeklyDoneCount
-            const targetDays = weekDays.filter(d => !d.isFuture).length
-            const percentage = targetDays > 0 ? Math.round((doneCount / targetDays) * 100) : 0
-
-            return (
-              <div key={habitData.habit.id} className="flex flex-col items-center min-w-[60px]">
-                {/* Habit Name */}
-                <span className="text-[10px] font-medium text-[var(--foreground)] text-center truncate max-w-[70px] mb-1">
-                  {habitData.habit.name}
+        <div className="min-w-fit">
+          {/* Habit Names Row */}
+          <div className="flex gap-3 mb-1">
+            <div className="w-8 flex-shrink-0" /> {/* Spacer for day labels */}
+            {userData.habits.map((habitData) => (
+              <div key={habitData.habit.id} className="w-12 flex-shrink-0 text-center">
+                <span className="text-[9px] font-medium text-[var(--foreground)] truncate block" title={habitData.habit.name}>
+                  {habitData.habit.name.length > 8 ? habitData.habit.name.slice(0, 7) + '…' : habitData.habit.name}
                 </span>
+              </div>
+            ))}
+          </div>
 
-                {/* Completion Ratio */}
-                <span className="text-xs font-semibold text-[var(--foreground)]">
-                  {doneCount}/{targetDays}
-                </span>
+          {/* Habit Stats Row */}
+          <div className="flex gap-3 mb-2">
+            <div className="w-8 flex-shrink-0" /> {/* Spacer for day labels */}
+            {userData.habits.map((habitData) => {
+              const doneCount = habitData.weeklyDoneCount
+              const targetDays = weekDays.filter(d => !d.isFuture).length
+              const percentage = targetDays > 0 ? Math.round((doneCount / targetDays) * 100) : 0
 
-                {/* Percentage */}
-                <span className={`text-[10px] font-medium mb-2 ${
-                  percentage >= 80 ? 'text-emerald-500' :
-                  percentage >= 60 ? 'text-amber-500' :
-                  'text-[var(--muted)]'
+              return (
+                <div key={habitData.habit.id} className="w-12 flex-shrink-0 text-center">
+                  <span className="text-[10px] font-semibold text-[var(--foreground)] block">
+                    {doneCount}/{targetDays}
+                  </span>
+                  <span className={`text-[9px] font-medium ${
+                    percentage >= 80 ? 'text-emerald-500' :
+                    percentage >= 60 ? 'text-amber-500' :
+                    'text-[var(--muted)]'
+                  }`}>
+                    {percentage}%
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Days Grid - Day label on left, dots for each habit */}
+          <div className="space-y-1">
+            {weekDays.map((day) => (
+              <div key={day.dateStr} className="flex gap-3 items-center">
+                {/* Day Label */}
+                <div className={`w-8 flex-shrink-0 text-[10px] font-medium ${
+                  day.isToday ? 'text-[var(--accent-text)] font-bold' : 'text-[var(--muted)]'
                 }`}>
-                  {percentage}%
-                </span>
+                  {format(day.date, 'EEE')[0]}
+                </div>
 
-                {/* Vertical Dots - One per day */}
-                <div className="flex flex-col gap-1">
-                  {weekDays.map((day) => {
-                    const entry = habitData.dailyEntries.get(day.dateStr)
-                    let dotColor = 'bg-gray-300 dark:bg-gray-600' // default/empty/future
+                {/* Dots for each habit */}
+                {userData.habits.map((habitData) => {
+                  const entry = habitData.dailyEntries.get(day.dateStr)
+                  let dotColor = 'bg-gray-300 dark:bg-gray-600' // default/empty/future
 
-                    if (!day.isFuture) {
-                      if (entry?.status === 'done') {
-                        dotColor = 'bg-emerald-500'
-                      } else if (entry?.status === 'missed') {
-                        dotColor = 'bg-red-500'
-                      } else if (entry?.status === 'skipped') {
-                        dotColor = 'bg-gray-400'
-                      }
+                  if (!day.isFuture) {
+                    if (entry?.status === 'done') {
+                      dotColor = 'bg-emerald-500'
+                    } else if (entry?.status === 'missed') {
+                      dotColor = 'bg-red-500'
+                    } else if (entry?.status === 'skipped') {
+                      dotColor = 'bg-gray-400'
                     }
+                  }
 
-                    return (
+                  return (
+                    <div key={habitData.habit.id} className="w-12 flex-shrink-0 flex justify-center">
                       <div
-                        key={day.dateStr}
                         className={`w-4 h-4 rounded-full ${dotColor} ${day.isToday ? 'ring-2 ring-offset-1 ring-[var(--accent-500)]' : ''}`}
                         title={`${format(day.date, 'EEE')}: ${entry?.status || (day.isFuture ? 'upcoming' : 'not tracked')}`}
                       />
-                    )
-                  })}
-                </div>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Day Labels */}
-      <div className="flex justify-center gap-4 mt-2 pt-2 border-t border-[var(--card-border)]/50">
-        <div className="flex flex-col items-center text-[8px] text-[var(--muted)]">
-          {weekDays.map((day) => (
-            <span key={day.dateStr} className={`h-5 flex items-center ${day.isToday ? 'font-bold text-[var(--accent-text)]' : ''}`}>
-              {format(day.date, 'EEE')[0]}
-            </span>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
