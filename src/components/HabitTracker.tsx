@@ -129,6 +129,7 @@ export default function HabitTracker() {
             habit_id: habitId,
             date,
             status: 'done' as const,
+            note: null,
             created_at: new Date().toISOString(),
           },
         ]
@@ -189,6 +190,45 @@ export default function HabitTracker() {
     // Revert on error - check for actual error message
     if (error?.message) {
       console.error('Error updating entry:', error)
+      fetchHabits()
+    }
+  }, [user, habits, supabase, fetchHabits])
+
+  // Update note for a habit entry
+  const handleUpdateNote = useCallback(async (habitId: string, date: string, note: string | null) => {
+    if (!user) return
+
+    const habit = habits.find((h) => h.id === habitId)
+    if (!habit) return
+
+    const existingEntry = habit.entries.find((e) => e.date === date)
+    if (!existingEntry || existingEntry.id.startsWith('temp-')) {
+      // Can't add note to non-existent or temp entry
+      return
+    }
+
+    // Optimistic update
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === habitId
+          ? {
+              ...h,
+              entries: h.entries.map((e) =>
+                e.id === existingEntry.id ? { ...e, note } : e
+              ),
+            }
+          : h
+      )
+    )
+
+    // Server update
+    const { error } = await supabase
+      .from('habit_entries')
+      .update({ note })
+      .eq('id', existingEntry.id)
+
+    if (error?.message) {
+      console.error('Error updating note:', error)
       fetchHabits()
     }
   }, [user, habits, supabase, fetchHabits])
@@ -275,9 +315,6 @@ export default function HabitTracker() {
     }
   }
 
-  // Memoize today's date string to avoid recalculating on each render
-  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
-
   // Calculate day of year and day of quarter
   const dayProgress = useMemo(() => {
     const today = new Date()
@@ -337,10 +374,6 @@ export default function HabitTracker() {
 
     return streak
   }, [habits])
-
-  const handleTodayClick = useCallback((habitId: string) => {
-    handleDayClick(habitId, todayStr)
-  }, [handleDayClick, todayStr])
 
   const handleEditHabit = useCallback((habit: HabitWithEntries) => {
     setEditingHabit(habit)
@@ -687,7 +720,7 @@ export default function HabitTracker() {
                 quarter={quarter}
                 year={year}
                 onDayClick={handleDayClick}
-                onTodayClick={handleTodayClick}
+                onNoteUpdate={handleUpdateNote}
                 onEdit={handleEditHabit}
                 onDelete={handleDeleteHabit}
               />

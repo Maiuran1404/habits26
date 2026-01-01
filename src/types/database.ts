@@ -22,6 +22,7 @@ export interface HabitEntry {
   habit_id: string
   date: string
   status: 'done' | 'missed' | 'skipped'
+  note: string | null
   created_at: string
 }
 

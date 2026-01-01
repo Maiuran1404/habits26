@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, memo, useState } from 'react'
-import { Trash2, Edit2, Check, X, Circle } from 'lucide-react'
-import { HabitWithEntries, Quarter, getQuarterDates } from '@/types/database'
+import { useMemo, memo, useState, useRef, useEffect } from 'react'
+import { Trash2, Edit2, Check, MessageSquare } from 'lucide-react'
+import { HabitWithEntries, HabitEntry, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
 import { format, eachDayOfInterval, subDays, parseISO } from 'date-fns'
 
@@ -11,64 +11,74 @@ interface HabitCardProps {
   quarter: Quarter
   year: number
   onDayClick?: (habitId: string, date: string) => void
-  onTodayClick?: (habitId: string) => void
+  onNoteUpdate?: (habitId: string, date: string, note: string | null) => void
   onEdit?: (habit: HabitWithEntries) => void
   onDelete?: (habitId: string) => void
   readonly?: boolean
 }
 
-// Separate component for Today button with animation
-function TodayButton({
-  status,
+// Single day button with animation
+function DayButton({
+  date,
+  label,
+  entry,
   color,
+  isToday,
   onClick,
 }: {
-  status?: 'done' | 'missed' | 'skipped'
+  date: string
+  label: string
+  entry?: HabitEntry
   color: string
-  onClick: () => void
+  isToday: boolean
+  onClick: (date: string) => void
 }) {
   const [isAnimating, setIsAnimating] = useState(false)
-  const isDone = status === 'done'
+  const isDone = entry?.status === 'done'
+  const isMissed = entry?.status === 'missed'
+  const hasNote = !!entry?.note
 
   const handleClick = () => {
     setIsAnimating(true)
-    onClick()
-    // Reset animation after it completes
+    onClick(date)
     setTimeout(() => setIsAnimating(false), 300)
   }
 
+  // Determine background and border colors
+  const getColors = () => {
+    if (isDone) return { bg: color, border: color }
+    if (isMissed) return { bg: '#ef4444', border: '#ef4444' } // red-500
+    return { bg: undefined, border: undefined }
+  }
+  const colors = getColors()
+
   return (
-    <button
-      onClick={handleClick}
-      className="flex-shrink-0 group"
-      title={isDone ? 'Completed today - click to undo' : 'Mark as done for today'}
-    >
-      <div
-        className={`
-          relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-          transition-all duration-200 ease-out
-          ${isAnimating ? 'scale-95' : 'scale-100'}
-          ${isDone
-            ? 'shadow-sm'
-            : 'bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-[var(--accent-400)] hover:bg-[var(--accent-bg)]'
-          }
-        `}
-        style={{
-          backgroundColor: isDone ? color : undefined,
-          borderColor: isDone ? color : undefined,
-        }}
+    <div className="group flex flex-col items-center gap-0.5">
+      {/* Day label */}
+      <span className={`text-[9px] font-medium ${isToday ? 'text-[var(--foreground)]' : 'text-[var(--muted-light)]'}`}>
+        {label}
+      </span>
+
+      {/* Clickable circle */}
+      <button
+        onClick={handleClick}
+        className="relative"
+        title={`${isToday ? 'Today' : label} - ${isDone ? 'done (click to mark missed)' : isMissed ? 'missed (click to clear)' : 'click to mark done'}`}
       >
-        {/* Checkmark circle */}
         <div
           className={`
-            w-5 h-5 rounded-full flex items-center justify-center
-            transition-all duration-200
-            ${isAnimating && !isDone ? 'scale-110' : ''}
-            ${isDone
-              ? 'bg-white/20'
-              : 'border-2 border-[var(--muted-light)] group-hover:border-[var(--accent-500)]'
+            relative w-6 h-6 rounded-full flex items-center justify-center
+            transition-all duration-200 ease-out cursor-pointer
+            ${isAnimating ? 'scale-90' : 'scale-100 hover:scale-110'}
+            ${isDone || isMissed
+              ? 'shadow-sm'
+              : 'border-2 border-[var(--card-border)] group-hover:border-[var(--accent-400)] bg-[var(--card-bg)] group-hover:bg-[var(--accent-bg)]'
             }
           `}
+          style={{
+            backgroundColor: colors.bg,
+            borderColor: colors.border,
+          }}
         >
           {isDone && (
             <Check
@@ -77,27 +87,87 @@ function TodayButton({
               strokeWidth={3}
             />
           )}
+          {isMissed && (
+            <span className="text-white text-[10px] font-bold">✕</span>
+          )}
+
+          {/* Ripple effect */}
+          {isAnimating && !isDone && !isMissed && (
+            <div
+              className="absolute inset-0 rounded-full animate-ping opacity-30"
+              style={{ backgroundColor: color }}
+            />
+          )}
         </div>
 
-        {/* Label */}
-        <span
-          className={`
-            text-xs font-medium transition-colors duration-200
-            ${isDone ? 'text-white' : 'text-[var(--muted)] group-hover:text-[var(--foreground)]'}
-          `}
-        >
-          {isDone ? 'Done' : 'Today'}
-        </span>
-
-        {/* Ripple effect on click */}
-        {isAnimating && !isDone && (
+        {/* Note indicator - small dot (not a button) */}
+        {hasNote && (
           <div
-            className="absolute inset-0 rounded-full animate-ping opacity-30"
-            style={{ backgroundColor: color }}
+            className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--accent-500)]"
+            title="Has note"
           />
         )}
-      </div>
-    </button>
+      </button>
+    </div>
+  )
+}
+
+// Recent days selector (today + past 3 days)
+function RecentDaysSelector({
+  entries,
+  color,
+  onDayClick,
+}: {
+  entries: HabitEntry[]
+  color: string
+  onDayClick: (date: string) => void
+}) {
+  const recentDays = useMemo(() => {
+    const today = new Date()
+    const days = []
+
+    for (let i = 3; i >= 0; i--) {
+      const date = subDays(today, i)
+      const dateStr = format(date, 'yyyy-MM-dd')
+      const dayOfWeek = format(date, 'EEE').toUpperCase().slice(0, 2)
+
+      let label: string
+      if (i === 0) {
+        label = 'TODAY'
+      } else if (i === 1) {
+        label = 'YST'
+      } else {
+        label = dayOfWeek
+      }
+
+      days.push({
+        date: dateStr,
+        label,
+        isToday: i === 0,
+      })
+    }
+
+    return days
+  }, [])
+
+  const getEntry = (date: string) => {
+    return entries.find(e => e.date === date)
+  }
+
+  return (
+    <div className="flex items-end gap-1">
+      {recentDays.map((day) => (
+        <DayButton
+          key={day.date}
+          date={day.date}
+          label={day.label}
+          entry={getEntry(day.date)}
+          color={color}
+          isToday={day.isToday}
+          onClick={onDayClick}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -107,11 +177,43 @@ const HabitCard = memo(function HabitCard({
   quarter,
   year,
   onDayClick,
-  onTodayClick,
+  onNoteUpdate,
   onEdit,
   onDelete,
   readonly = false,
 }: HabitCardProps) {
+  const [isEditingNote, setIsEditingNote] = useState(false)
+  const [noteText, setNoteText] = useState('')
+  const noteInputRef = useRef<HTMLInputElement>(null)
+
+  // Get today's entry
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const todayEntry = useMemo(() => {
+    return habit.entries.find(e => e.date === todayStr)
+  }, [habit.entries, todayStr])
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingNote && noteInputRef.current) {
+      noteInputRef.current.focus()
+    }
+  }, [isEditingNote])
+
+  // Start editing note
+  const handleStartEditNote = () => {
+    setNoteText(todayEntry?.note || '')
+    setIsEditingNote(true)
+  }
+
+  // Save note
+  const handleSaveNote = () => {
+    if (onNoteUpdate && todayEntry) {
+      const trimmed = noteText.trim()
+      onNoteUpdate(habit.id, todayStr, trimmed || null)
+    }
+    setIsEditingNote(false)
+  }
+
   // Calculate streak (consecutive days ending today or yesterday)
   const streak = useMemo(() => {
     const today = new Date()
@@ -175,15 +277,9 @@ const HabitCard = memo(function HabitCard({
     }
   }, [habit.entries, quarter, year])
 
-  // Today's entry status
-  const todayEntry = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    return habit.entries.find((e) => e.date === todayStr)
-  }, [habit.entries])
-
   return (
     <div className="glass-card p-4 transition-all hover:scale-[1.005]">
-      {/* Header: Name + Stats + Today Checkbox */}
+      {/* Header: Name + Stats + Day Buttons */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Color indicator */}
@@ -210,12 +306,12 @@ const HabitCard = memo(function HabitCard({
           </div>
         </div>
 
-        {/* Today Button - Mark as Done */}
-        {!readonly && (
-          <TodayButton
-            status={todayEntry?.status}
+        {/* Recent Days - Quick toggle for today and past 3 days */}
+        {!readonly && onDayClick && (
+          <RecentDaysSelector
+            entries={habit.entries}
             color={habit.color}
-            onClick={() => onTodayClick?.(habit.id)}
+            onDayClick={(date) => onDayClick(habit.id, date)}
           />
         )}
       </div>
@@ -232,23 +328,69 @@ const HabitCard = memo(function HabitCard({
         />
       </div>
 
-      {/* Edit/Delete Buttons - More subtle */}
+      {/* Footer: Note input + Edit/Delete buttons */}
       {!readonly && (
-        <div className="flex items-center justify-end gap-1 pt-2 border-t border-[var(--card-border)]">
-          <button
-            onClick={() => onEdit?.(habit)}
-            className="pill-button p-1.5 text-[var(--muted-light)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
-            title="Edit habit"
-          >
-            <Edit2 size={12} />
-          </button>
-          <button
-            onClick={() => onDelete?.(habit.id)}
-            className="pill-button p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Delete habit"
-          >
-            <Trash2 size={12} />
-          </button>
+        <div className="pt-2 border-t border-[var(--card-border)]">
+          {/* Note section - show if today has any entry (done or missed) */}
+          {todayEntry && onNoteUpdate && (
+            <div className="mb-2">
+              {isEditingNote ? (
+                <input
+                  ref={noteInputRef}
+                  type="text"
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveNote()
+                    if (e.key === 'Escape') setIsEditingNote(false)
+                  }}
+                  onBlur={handleSaveNote}
+                  placeholder="Add a note for today..."
+                  className="w-full text-xs px-2 py-1.5 rounded-lg bg-[var(--card-bg)] border border-[var(--card-border)] focus:border-[var(--accent-400)] focus:outline-none text-[var(--foreground)] placeholder-[var(--muted-light)]"
+                  maxLength={100}
+                />
+              ) : (
+                <button
+                  onClick={handleStartEditNote}
+                  className="w-full flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-lg hover:bg-[var(--card-bg)] transition-colors text-left group"
+                >
+                  <MessageSquare
+                    size={12}
+                    className={
+                      todayEntry.note
+                        ? todayEntry.status === 'missed' ? 'text-red-400' : 'text-[var(--accent-500)]'
+                        : 'text-[var(--muted-light)]'
+                    }
+                  />
+                  {todayEntry.note ? (
+                    <span className="text-[var(--foreground)] truncate">{todayEntry.note}</span>
+                  ) : (
+                    <span className="text-[var(--muted-light)] group-hover:text-[var(--muted)]">
+                      {todayEntry.status === 'missed' ? 'Add note (why missed?)...' : 'Add note for today...'}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Edit/Delete Buttons */}
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => onEdit?.(habit)}
+              className="pill-button p-1.5 text-[var(--muted-light)] hover:text-[var(--foreground)] hover:bg-[var(--card-bg)] transition-colors"
+              title="Edit habit"
+            >
+              <Edit2 size={12} />
+            </button>
+            <button
+              onClick={() => onDelete?.(habit.id)}
+              className="pill-button p-1.5 text-[var(--muted-light)] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              title="Delete habit"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
       )}
     </div>

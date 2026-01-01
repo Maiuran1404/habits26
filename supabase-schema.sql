@@ -34,9 +34,13 @@ CREATE TABLE habit_entries (
   habit_id UUID REFERENCES habits(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
   status TEXT CHECK (status IN ('done', 'missed', 'skipped')) DEFAULT 'done',
+  note TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(habit_id, date)
 );
+
+-- Migration for existing databases (add note column):
+-- ALTER TABLE habit_entries ADD COLUMN IF NOT EXISTS note TEXT;
 
 -- Partnerships table (for tracking with friends)
 CREATE TABLE partnerships (
