@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil } from 'lucide-react'
-import { format } from 'date-fns'
+import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil, Flame, Calendar } from 'lucide-react'
+import { format, getDayOfYear, startOfQuarter, differenceInDays, parseISO, subDays } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { HabitWithEntries, Quarter, getCurrentQuarter, Habit } from '@/types/database'
@@ -103,7 +103,7 @@ export default function HabitTracker() {
     fetchHabits()
   }, [fetchHabits])
 
-  const handleDayClick = async (habitId: string, date: string) => {
+  const handleDayClick = useCallback(async (habitId: string, date: string) => {
     if (!user) return
 
     const habit = habits.find((h) => h.id === habitId)
@@ -143,7 +143,7 @@ export default function HabitTracker() {
 
     // Server update
     let error = null
-    if (existingEntry) {
+    if (existingEntry && !existingEntry.id.startsWith('temp-')) {
       if (existingEntry.status === 'done') {
         const result = await supabase
           .from('habit_entries')
@@ -157,21 +157,41 @@ export default function HabitTracker() {
           .eq('id', existingEntry.id)
         error = result.error
       }
-    } else {
+    } else if (!existingEntry) {
       const result = await supabase.from('habit_entries').insert({
         habit_id: habitId,
         date,
         status: 'done',
-      })
+      }).select().single()
       error = result.error
+
+      // Update local state with real ID from database
+      if (result.data) {
+        setHabits((prev) =>
+          prev.map((h) =>
+            h.id === habitId
+              ? {
+                  ...h,
+                  entries: h.entries.map((e) =>
+                    e.date === date && e.id.startsWith('temp-') ? result.data : e
+                  ),
+                }
+              : h
+          )
+        )
+      }
+    } else {
+      // Entry has temp ID - refetch to sync with server
+      fetchHabits()
+      return
     }
 
-    // Revert on error - check if error has actual content (empty object {} is truthy but not a real error)
-    if (error && Object.keys(error).length > 0) {
+    // Revert on error - check for actual error message
+    if (error?.message) {
       console.error('Error updating entry:', error)
       fetchHabits()
     }
-  }
+  }, [user, habits, supabase, fetchHabits])
 
   const handleSaveHabit = async (habitData: {
     name: string
@@ -258,9 +278,69 @@ export default function HabitTracker() {
   // Memoize today's date string to avoid recalculating on each render
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
 
+  // Calculate day of year and day of quarter
+  const dayProgress = useMemo(() => {
+    const today = new Date()
+    const dayOfYear = getDayOfYear(today)
+    const quarterStart = startOfQuarter(today)
+    const dayOfQuarter = differenceInDays(today, quarterStart) + 1
+    const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+    const daysInYear = isLeapYear(today.getFullYear()) ? 366 : 365
+    // Quarters have ~90 days (Q1: 90/91, Q2: 91, Q3: 92, Q4: 92)
+    const currentQuarter = Math.floor(today.getMonth() / 3) + 1
+    const daysInQuarter = currentQuarter === 1 ? (isLeapYear(today.getFullYear()) ? 91 : 90)
+                        : currentQuarter === 2 ? 91
+                        : 92
+    return { dayOfYear, dayOfQuarter, daysInYear, daysInQuarter }
+  }, [])
+
+  // Calculate tracking streak (consecutive days with at least one habit marked done)
+  const trackingStreak = useMemo(() => {
+    if (habits.length === 0) return 0
+
+    // Get all unique dates with at least one "done" entry
+    const allDoneDates = new Set<string>()
+    habits.forEach(habit => {
+      habit.entries.forEach(entry => {
+        if (entry.status === 'done') {
+          allDoneDates.add(entry.date)
+        }
+      })
+    })
+
+    if (allDoneDates.size === 0) return 0
+
+    // Sort dates descending
+    const sortedDates = Array.from(allDoneDates).sort((a, b) => b.localeCompare(a))
+
+    const today = new Date()
+    const todayStr = format(today, 'yyyy-MM-dd')
+    const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd')
+
+    // Streak only counts if most recent is today or yesterday
+    const mostRecent = sortedDates[0]
+    if (mostRecent !== todayStr && mostRecent !== yesterdayStr) return 0
+
+    // Count consecutive days
+    let streak = 1
+    let currentDate = parseISO(mostRecent)
+
+    for (let i = 1; i < sortedDates.length; i++) {
+      const expectedPrev = format(subDays(currentDate, 1), 'yyyy-MM-dd')
+      if (sortedDates[i] === expectedPrev) {
+        streak++
+        currentDate = parseISO(sortedDates[i])
+      } else {
+        break
+      }
+    }
+
+    return streak
+  }, [habits])
+
   const handleTodayClick = useCallback((habitId: string) => {
     handleDayClick(habitId, todayStr)
-  }, [todayStr])
+  }, [handleDayClick, todayStr])
 
   const handleEditHabit = useCallback((habit: HabitWithEntries) => {
     setEditingHabit(habit)
@@ -334,6 +414,10 @@ export default function HabitTracker() {
             <div className="flex items-center gap-2 flex-shrink-0">
               {user ? (
                 <>
+                  {/* Username display */}
+                  <span className="hidden sm:block text-sm text-[var(--muted)] font-medium">
+                    {profile?.display_name || user.email?.split('@')[0]}
+                  </span>
                   <button
                     onClick={() => {
                       setEditingHabit(null)
