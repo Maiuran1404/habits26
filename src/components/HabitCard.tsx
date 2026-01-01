@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, memo } from 'react'
+import { useMemo, memo, useState } from 'react'
 import { Trash2, Edit2, Check, X, Circle } from 'lucide-react'
 import { HabitWithEntries, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
@@ -15,6 +15,90 @@ interface HabitCardProps {
   onEdit?: (habit: HabitWithEntries) => void
   onDelete?: (habitId: string) => void
   readonly?: boolean
+}
+
+// Separate component for Today button with animation
+function TodayButton({
+  status,
+  color,
+  onClick,
+}: {
+  status?: 'done' | 'missed' | 'skipped'
+  color: string
+  onClick: () => void
+}) {
+  const [isAnimating, setIsAnimating] = useState(false)
+  const isDone = status === 'done'
+
+  const handleClick = () => {
+    setIsAnimating(true)
+    onClick()
+    // Reset animation after it completes
+    setTimeout(() => setIsAnimating(false), 300)
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex-shrink-0 group"
+      title={isDone ? 'Completed today - click to undo' : 'Mark as done for today'}
+    >
+      <div
+        className={`
+          relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
+          transition-all duration-200 ease-out
+          ${isAnimating ? 'scale-95' : 'scale-100'}
+          ${isDone
+            ? 'shadow-sm'
+            : 'bg-[var(--card-bg)] border border-[var(--card-border)] hover:border-[var(--accent-400)] hover:bg-[var(--accent-bg)]'
+          }
+        `}
+        style={{
+          backgroundColor: isDone ? color : undefined,
+          borderColor: isDone ? color : undefined,
+        }}
+      >
+        {/* Checkmark circle */}
+        <div
+          className={`
+            w-5 h-5 rounded-full flex items-center justify-center
+            transition-all duration-200
+            ${isAnimating && !isDone ? 'scale-110' : ''}
+            ${isDone
+              ? 'bg-white/20'
+              : 'border-2 border-[var(--muted-light)] group-hover:border-[var(--accent-500)]'
+            }
+          `}
+        >
+          {isDone && (
+            <Check
+              size={12}
+              className={`text-white transition-all duration-200 ${isAnimating ? 'scale-125' : 'scale-100'}`}
+              strokeWidth={3}
+            />
+          )}
+        </div>
+
+        {/* Label */}
+        <span
+          className={`
+            text-xs font-medium transition-colors duration-200
+            ${isDone ? 'text-white' : 'text-[var(--muted)] group-hover:text-[var(--foreground)]'}
+          `}
+        >
+          {isDone ? 'Done' : 'Today'}
+        </span>
+
+        {/* Ripple effect on click */}
+        {isAnimating && !isDone && (
+          <div
+            className="absolute inset-0 rounded-full animate-ping opacity-30"
+            style={{ backgroundColor: color }}
+          />
+        )}
+      </div>
+    </button>
+  )
 }
 
 // Memoized to prevent re-renders when parent state changes but props are the same
@@ -126,34 +210,13 @@ const HabitCard = memo(function HabitCard({
           </div>
         </div>
 
-        {/* Today Checkbox */}
+        {/* Today Button - Mark as Done */}
         {!readonly && (
-          <button
+          <TodayButton
+            status={todayEntry?.status}
+            color={habit.color}
             onClick={() => onTodayClick?.(habit.id)}
-            className="flex-shrink-0"
-            title={todayEntry?.status === 'done' ? 'Completed today' : todayEntry?.status === 'missed' ? 'Missed today' : 'Mark today as done'}
-          >
-            <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                todayEntry?.status === 'done'
-                  ? ''
-                  : todayEntry?.status === 'missed'
-                  ? 'bg-red-500/20 border border-red-500/30'
-                  : 'bg-[var(--card-bg)] hover:bg-[var(--accent-bg)] border border-[var(--card-border)]'
-              }`}
-              style={{
-                backgroundColor: todayEntry?.status === 'done' ? habit.color : undefined,
-              }}
-            >
-              {todayEntry?.status === 'done' ? (
-                <Check size={14} className="text-white" strokeWidth={2.5} />
-              ) : todayEntry?.status === 'missed' ? (
-                <X size={12} className="text-red-400" />
-              ) : (
-                <Circle size={12} className="text-[var(--muted-light)]" />
-              )}
-            </div>
-          </button>
+          />
         )}
       </div>
 

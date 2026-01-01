@@ -486,6 +486,41 @@ export default function HabitTracker() {
           </div>
         </div>
 
+        {/* Progress Stats Bar - Day counters and streak (only for logged in users) */}
+        {user && (
+          <div className="glass-card p-3 mb-4">
+            <div className="flex items-center justify-between gap-4">
+              {/* Year Progress */}
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-[var(--accent-500)]" />
+                <div className="text-sm">
+                  <span className="font-semibold text-[var(--foreground)]">Day {dayProgress.dayOfYear}</span>
+                  <span className="text-[var(--muted)]">/{dayProgress.daysInYear}</span>
+                </div>
+              </div>
+
+              {/* Quarter Progress */}
+              <div className="flex items-center gap-2">
+                <div className="text-sm">
+                  <span className="font-semibold text-[var(--foreground)]">Q{Math.floor(new Date().getMonth() / 3) + 1} Day {dayProgress.dayOfQuarter}</span>
+                  <span className="text-[var(--muted)]">/{dayProgress.daysInQuarter}</span>
+                </div>
+              </div>
+
+              {/* Tracking Streak */}
+              <div className="flex items-center gap-2">
+                <Flame size={16} className={trackingStreak > 0 ? "text-orange-500" : "text-[var(--muted-light)]"} />
+                <div className="text-sm">
+                  <span className={`font-semibold ${trackingStreak > 0 ? "text-orange-500" : "text-[var(--muted)]"}`}>
+                    {trackingStreak}
+                  </span>
+                  <span className="text-[var(--muted)]"> day streak</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mobile: Quarter Selector */}
         <div className="flex justify-center mb-4 lg:hidden">
           <QuarterSelector
