@@ -206,3 +206,43 @@ BEGIN
   WHERE p.email = search_email;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Goals table
+CREATE TABLE goals (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  type TEXT CHECK (type IN ('daily', 'weekly', 'monthly', 'quarterly', 'yearly')) NOT NULL,
+  completed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  quarter TEXT CHECK (quarter IN ('Q1', 'Q2', 'Q3', 'Q4')),
+  year INTEGER,
+  week_start DATE
+);
+
+-- Goals indexes
+CREATE INDEX idx_goals_user_id ON goals(user_id);
+CREATE INDEX idx_goals_type ON goals(type);
+CREATE INDEX idx_goals_year ON goals(year);
+CREATE INDEX idx_goals_quarter ON goals(quarter);
+CREATE INDEX idx_goals_week_start ON goals(week_start);
+
+-- Enable RLS on goals
+ALTER TABLE goals ENABLE ROW LEVEL SECURITY;
+
+-- Goals policies
+CREATE POLICY "Users can view their own goals"
+  ON goals FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own goals"
+  ON goals FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own goals"
+  ON goals FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own goals"
+  ON goals FOR DELETE
+  USING (auth.uid() = user_id);

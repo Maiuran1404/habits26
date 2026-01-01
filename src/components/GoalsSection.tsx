@@ -143,13 +143,14 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
   }, [fetchGoals])
 
   const handleAddGoal = async (type: GoalType, weekStart?: string) => {
-    if (!userId || !newGoalTitle.trim()) return
+    const title = newGoalTitle.trim()
+    if (!userId || !title) return
 
     const tempId = `temp-${Date.now()}`
     const newGoal: Goal = {
       id: tempId,
       user_id: userId,
-      title: newGoalTitle.trim(),
+      title,
       type,
       completed: false,
       created_at: new Date().toISOString(),
@@ -158,13 +159,14 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
       week_start: type === 'weekly' ? weekStart : null,
     }
 
-    setGoals((prev) => [...prev, newGoal])
+    // Clear input immediately for better UX
     setNewGoalTitle('')
     setAddingTo(null)
+    setGoals((prev) => [...prev, newGoal])
 
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       user_id: userId,
-      title: newGoalTitle.trim(),
+      title,
       type,
       completed: false,
       year: year,
@@ -187,7 +189,7 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
       .single()
 
     if (error) {
-      console.error('Error adding goal:', error)
+      console.error('Error adding goal:', error.message, error.details, error.hint, error.code)
       setGoals((prev) => prev.filter((g) => g.id !== tempId))
     } else if (data) {
       setGoals((prev) => prev.map((g) => (g.id === tempId ? data : g)))
@@ -233,23 +235,16 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
     return goals.filter((g) => {
       if (g.type !== type) return false
 
-      // For yearly goals, match by year
+      // Strict matching - goals only show in their specific period
       if (type === 'yearly') {
-        // Include goals without year field (legacy) or matching year
-        return !g.year || g.year === year
+        return g.year === year
       }
 
-      // For quarterly goals, match by quarter and year
       if (type === 'quarterly') {
-        // Include goals without quarter/year (legacy) or matching
-        if (!g.quarter && !g.year) return true
         return g.quarter === quarter && g.year === year
       }
 
-      // For weekly goals, match by week_start
       if (type === 'weekly') {
-        // Include goals without week_start (legacy) or matching
-        if (!g.week_start) return true
         return g.week_start === weekStart
       }
 
@@ -331,11 +326,11 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
                         {columnGoals.map((goal) => (
                           <div
                             key={goal.id}
-                            className="group flex items-start gap-1.5 p-1 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
+                            className="group flex items-start gap-1.5 p-1.5 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
                           >
                             <button
                               onClick={() => handleToggleGoal(goal.id)}
-                              className="flex-shrink-0 mt-0.5"
+                              className="shrink-0 mt-0.5 hover:scale-110 transition-transform"
                             >
                               {goal.completed ? (
                                 <CheckCircle2
@@ -345,7 +340,7 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
                               ) : (
                                 <Circle
                                   size={14}
-                                  className="text-[var(--muted-light)]"
+                                  className="text-[var(--muted-light)] hover:text-[var(--accent-500)]"
                                 />
                               )}
                             </button>
@@ -360,42 +355,43 @@ export default function GoalsSection({ quarter, year }: GoalsSectionProps) {
                             </span>
                             <button
                               onClick={() => handleDeleteGoal(goal.id)}
-                              className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-red-500/20 rounded-full"
+                              className="shrink-0 opacity-40 hover:opacity-100 transition-opacity p-0.5 hover:bg-red-500/20 rounded"
+                              title="Delete goal"
                             >
-                              <X size={10} className="text-[var(--muted-light)] hover:text-red-400" />
+                              <X size={12} className="text-[var(--muted-light)] hover:text-red-400" />
                             </button>
                           </div>
                         ))}
 
                         {/* Add Goal Input or Button */}
                         {addingTo === column.type ? (
-                          <div className="flex items-center gap-1 p-1">
+                          <div className="flex items-center gap-1 p-1 bg-[var(--card-bg)] rounded-lg">
                             <input
                               type="text"
                               value={newGoalTitle}
                               onChange={(e) => setNewGoalTitle(e.target.value)}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleAddGoal(column.type, column.weekStart)
+                                if (e.key === 'Enter' && newGoalTitle.trim()) {
+                                  handleAddGoal(column.type, column.weekStart)
+                                }
                                 if (e.key === 'Escape') {
                                   setAddingTo(null)
                                   setNewGoalTitle('')
                                 }
                               }}
-                              onBlur={() => {
-                                if (!newGoalTitle.trim()) {
-                                  setAddingTo(null)
-                                  setNewGoalTitle('')
-                                }
-                              }}
-                              placeholder="Goal..."
+                              placeholder="Type goal and press Enter..."
                               autoFocus
-                              className="flex-1 bg-transparent text-xs text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none border-b border-[var(--accent-border)] py-0.5"
+                              className="flex-1 bg-transparent text-xs text-[var(--foreground)] placeholder-[var(--muted-light)] outline-none py-1 px-1"
                             />
                             <button
-                              onClick={() => handleAddGoal(column.type, column.weekStart)}
-                              className="pill-button p-1 hover:bg-[var(--card-bg)]"
+                              onClick={() => {
+                                setAddingTo(null)
+                                setNewGoalTitle('')
+                              }}
+                              className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                              title="Cancel"
                             >
-                              <Plus size={12} className="text-[var(--accent-500)]" />
+                              <X size={12} className="text-[var(--muted-light)] hover:text-red-400" />
                             </button>
                           </div>
                         ) : (
