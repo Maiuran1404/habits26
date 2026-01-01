@@ -121,9 +121,11 @@ const HabitGrid = memo(function HabitGrid({
                         bgStyle = ''
                         customBg = color
                       } else if (entry.status === 'missed') {
-                        bgStyle = 'bg-red-500/50'
+                        bgStyle = ''
+                        customBg = '#ef4444' // red-500
                       } else if (entry.status === 'skipped') {
-                        bgStyle = 'bg-[var(--muted-light)]/30'
+                        bgStyle = ''
+                        customBg = '#9ca3af' // gray-400 (rest day)
                       }
                     } else if (isFuture) {
                       bgStyle = 'bg-[var(--foreground)]/[0.03]'

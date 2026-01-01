@@ -4,7 +4,7 @@ import { useMemo, memo, useState, useRef, useEffect } from 'react'
 import { Trash2, Edit2, Check, MessageSquare } from 'lucide-react'
 import { HabitWithEntries, HabitEntry, Quarter, getQuarterDates } from '@/types/database'
 import HabitGrid from './HabitGrid'
-import { format, eachDayOfInterval, subDays, parseISO } from 'date-fns'
+import { format, eachDayOfInterval, subDays, parseISO, startOfWeek, endOfWeek } from 'date-fns'
 
 interface HabitCardProps {
   habit: HabitWithEntries
@@ -24,6 +24,7 @@ function DayButton({
   entry,
   color,
   isToday,
+  canSkip,
   onClick,
 }: {
   date: string
@@ -31,10 +32,12 @@ function DayButton({
   entry?: HabitEntry
   color: string
   isToday: boolean
+  canSkip: boolean
   onClick: (date: string) => void
 }) {
   const [isAnimating, setIsAnimating] = useState(false)
   const isDone = entry?.status === 'done'
+  const isSkipped = entry?.status === 'skipped'
   const isMissed = entry?.status === 'missed'
   const hasNote = !!entry?.note
 
@@ -47,10 +50,24 @@ function DayButton({
   // Determine background and border colors
   const getColors = () => {
     if (isDone) return { bg: color, border: color }
+    if (isSkipped) return { bg: '#9ca3af', border: '#9ca3af' } // gray-400 (rest day)
     if (isMissed) return { bg: '#ef4444', border: '#ef4444' } // red-500
     return { bg: undefined, border: undefined }
   }
   const colors = getColors()
+
+  // Get tooltip text based on whether skipping is allowed
+  const getTooltip = () => {
+    const dayLabel = isToday ? 'Today' : label
+    if (isDone) {
+      return canSkip
+        ? `${dayLabel} - done (click for rest day)`
+        : `${dayLabel} - done (click to mark missed)`
+    }
+    if (isSkipped) return `${dayLabel} - rest day (click to mark missed)`
+    if (isMissed) return `${dayLabel} - missed (click to clear)`
+    return `${dayLabel} - click to mark done`
+  }
 
   return (
     <div className="group flex flex-col items-center gap-0.5">
@@ -63,14 +80,14 @@ function DayButton({
       <button
         onClick={handleClick}
         className="relative"
-        title={`${isToday ? 'Today' : label} - ${isDone ? 'done (click to mark missed)' : isMissed ? 'missed (click to clear)' : 'click to mark done'}`}
+        title={getTooltip()}
       >
         <div
           className={`
             relative w-6 h-6 rounded-full flex items-center justify-center
             transition-all duration-200 ease-out cursor-pointer
             ${isAnimating ? 'scale-90' : 'scale-100 hover:scale-110'}
-            ${isDone || isMissed
+            ${isDone || isSkipped || isMissed
               ? 'shadow-sm'
               : 'border-2 border-[var(--card-border)] group-hover:border-[var(--accent-400)] bg-[var(--card-bg)] group-hover:bg-[var(--accent-bg)]'
             }
@@ -87,12 +104,15 @@ function DayButton({
               strokeWidth={3}
             />
           )}
+          {isSkipped && (
+            <span className="text-white text-[10px] font-bold">–</span>
+          )}
           {isMissed && (
             <span className="text-white text-[10px] font-bold">✕</span>
           )}
 
           {/* Ripple effect */}
-          {isAnimating && !isDone && !isMissed && (
+          {isAnimating && !isDone && !isSkipped && !isMissed && (
             <div
               className="absolute inset-0 rounded-full animate-ping opacity-30"
               style={{ backgroundColor: color }}
@@ -116,12 +136,17 @@ function DayButton({
 function RecentDaysSelector({
   entries,
   color,
+  targetPerWeek,
   onDayClick,
 }: {
   entries: HabitEntry[]
   color: string
+  targetPerWeek: number
   onDayClick: (date: string) => void
 }) {
+  // Calculate allowed rest days per week
+  const allowedRestDays = 7 - targetPerWeek
+
   const recentDays = useMemo(() => {
     const today = new Date()
     const days = []
@@ -142,6 +167,7 @@ function RecentDaysSelector({
 
       days.push({
         date: dateStr,
+        dateObj: date,
         label,
         isToday: i === 0,
       })
@@ -154,6 +180,26 @@ function RecentDaysSelector({
     return entries.find(e => e.date === date)
   }
 
+  // Calculate if skipping is allowed for a specific date
+  const canSkipForDate = (dateStr: string, dateObj: Date) => {
+    if (allowedRestDays <= 0) return false
+
+    const weekStartDate = startOfWeek(dateObj, { weekStartsOn: 1 })
+    const weekEndDate = endOfWeek(dateObj, { weekStartsOn: 1 })
+    const weekStartStr = format(weekStartDate, 'yyyy-MM-dd')
+    const weekEndStr = format(weekEndDate, 'yyyy-MM-dd')
+
+    // Count existing skipped entries in this week (excluding the current day)
+    const skippedInWeek = entries.filter(e =>
+      e.status === 'skipped' &&
+      e.date >= weekStartStr &&
+      e.date <= weekEndStr &&
+      e.date !== dateStr
+    ).length
+
+    return skippedInWeek < allowedRestDays
+  }
+
   return (
     <div className="flex items-end gap-1">
       {recentDays.map((day) => (
@@ -164,6 +210,7 @@ function RecentDaysSelector({
           entry={getEntry(day.date)}
           color={color}
           isToday={day.isToday}
+          canSkip={canSkipForDate(day.date, day.dateObj)}
           onClick={onDayClick}
         />
       ))}
@@ -311,6 +358,7 @@ const HabitCard = memo(function HabitCard({
           <RecentDaysSelector
             entries={habit.entries}
             color={habit.color}
+            targetPerWeek={habit.target_per_week ?? 7}
             onDayClick={(date) => onDayClick(habit.id, date)}
           />
         )}
@@ -366,7 +414,8 @@ const HabitCard = memo(function HabitCard({
                     <span className="text-[var(--foreground)] truncate">{todayEntry.note}</span>
                   ) : (
                     <span className="text-[var(--muted-light)] group-hover:text-[var(--muted)]">
-                      {todayEntry.status === 'missed' ? 'Add note (why missed?)...' : 'Add note for today...'}
+                      {todayEntry.status === 'missed' ? 'Add note (why missed?)...' :
+                       todayEntry.status === 'skipped' ? 'Add note (rest day)...' : 'Add note for today...'}
                     </span>
                   )}
                 </button>

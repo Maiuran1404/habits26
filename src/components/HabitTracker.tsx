@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { Plus, LogOut, Settings, Target, Sparkles, Lock, Unlock, Pencil, Flame, Calendar } from 'lucide-react'
-import { format, getDayOfYear, startOfQuarter, differenceInDays, parseISO, subDays } from 'date-fns'
+import { format, getDayOfYear, startOfQuarter, differenceInDays, parseISO, subDays, startOfWeek, endOfWeek } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/context/AuthContext'
 import { HabitWithEntries, Quarter, getCurrentQuarter, Habit } from '@/types/database'
@@ -111,12 +111,48 @@ export default function HabitTracker() {
 
     const existingEntry = habit.entries.find((e) => e.date === date)
 
+    // Calculate allowed rest days per week based on target_per_week
+    // e.g., target_per_week = 6 means 1 rest day allowed (7 - 6 = 1)
+    const targetPerWeek = habit.target_per_week ?? 7
+    const allowedRestDays = 7 - targetPerWeek
+
+    // Get the week bounds for this date (Monday to Sunday)
+    const clickedDate = parseISO(date)
+    const weekStartDate = startOfWeek(clickedDate, { weekStartsOn: 1 })
+    const weekEndDate = endOfWeek(clickedDate, { weekStartsOn: 1 })
+    const weekStartStr = format(weekStartDate, 'yyyy-MM-dd')
+    const weekEndStr = format(weekEndDate, 'yyyy-MM-dd')
+
+    // Count existing skipped entries in this week (excluding current day)
+    const skippedInWeek = habit.entries.filter(e =>
+      e.status === 'skipped' &&
+      e.date >= weekStartStr &&
+      e.date <= weekEndStr &&
+      e.date !== date
+    ).length
+
+    // Can we add another rest day this week?
+    const canSkip = skippedInWeek < allowedRestDays
+
+    // Click cycle: Empty → Done → Skipped (if allowed) → Missed → Delete
+    const getNextStatus = (currentStatus: string | undefined): 'done' | 'skipped' | 'missed' | null => {
+      if (!currentStatus) return 'done'
+      if (currentStatus === 'done') {
+        // Only allow skipping if there's slack remaining this week
+        return canSkip ? 'skipped' : 'missed'
+      }
+      if (currentStatus === 'skipped') return 'missed'
+      return null // missed → delete
+    }
+
+    const nextStatus = getNextStatus(existingEntry?.status)
+
     // Optimistic update
     const updateEntries = (entries: typeof habit.entries) => {
       if (existingEntry) {
-        if (existingEntry.status === 'done') {
+        if (nextStatus) {
           return entries.map((e) =>
-            e.id === existingEntry.id ? { ...e, status: 'missed' as const } : e
+            e.id === existingEntry.id ? { ...e, status: nextStatus } : e
           )
         } else {
           return entries.filter((e) => e.id !== existingEntry.id)
@@ -145,10 +181,10 @@ export default function HabitTracker() {
     // Server update
     let error = null
     if (existingEntry && !existingEntry.id.startsWith('temp-')) {
-      if (existingEntry.status === 'done') {
+      if (nextStatus) {
         const result = await supabase
           .from('habit_entries')
-          .update({ status: 'missed' })
+          .update({ status: nextStatus })
           .eq('id', existingEntry.id)
         error = result.error
       } else {
