@@ -7,20 +7,102 @@ import { useAuth } from '@/context/AuthContext'
 import { Profile, HabitWithEntries, Partnership } from '@/types/database'
 import {
   format,
-  startOfMonth,
-  endOfMonth,
   eachDayOfInterval,
-  startOfWeek,
-  endOfWeek,
-  addMonths,
-  subMonths,
-  isSameMonth,
+  addDays,
   getWeek
 } from 'date-fns'
 
-interface MonthlyComparisonProps {
-  quarter: string
+// Define 4-week periods for each year
+// Each "month" is exactly 4 complete weeks (28 days)
+// For 2025: Month 1 starts Jan 5 (Sunday), each period is 28 days
+// 2025: Jan 5 is chosen as it's the first Sunday of the year
+// 2026: Jan 4 is the first Sunday of the year
+function getYearStartDate(year: number): Date {
+  // Find the first Sunday of the year (or use a fixed offset)
+  // For 2025, Jan 5 is Sunday; for 2026, Jan 4 is Sunday
+  const jan1 = new Date(year, 0, 1)
+  const dayOfWeek = jan1.getDay() // 0 = Sunday
+  // Days until first Sunday (if Jan 1 is Sunday, offset is 0)
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek
+  return addDays(jan1, daysUntilSunday + 4) // Start from the first Sunday after Jan 4
+}
+
+interface FourWeekPeriod {
+  periodNumber: number
+  startDate: Date
+  endDate: Date
   year: number
+}
+
+function getFourWeekPeriods(year: number): FourWeekPeriod[] {
+  const periods: FourWeekPeriod[] = []
+  // Manual definition for 2025 as per user specification
+  if (year === 2025) {
+    const manualPeriods = [
+      { start: new Date(2025, 0, 5), end: new Date(2025, 1, 1) },   // Jan 5 - Feb 1
+      { start: new Date(2025, 1, 2), end: new Date(2025, 2, 1) },   // Feb 2 - Mar 1
+      { start: new Date(2025, 2, 2), end: new Date(2025, 2, 29) },  // Mar 2 - Mar 29
+      { start: new Date(2025, 2, 30), end: new Date(2025, 3, 26) }, // Mar 30 - Apr 26
+      { start: new Date(2025, 3, 27), end: new Date(2025, 4, 24) }, // Apr 27 - May 24
+      { start: new Date(2025, 4, 25), end: new Date(2025, 5, 21) }, // May 25 - Jun 21
+      { start: new Date(2025, 5, 22), end: new Date(2025, 6, 19) }, // Jun 22 - Jul 19
+      { start: new Date(2025, 6, 20), end: new Date(2025, 7, 16) }, // Jul 20 - Aug 16
+      { start: new Date(2025, 7, 17), end: new Date(2025, 8, 13) }, // Aug 17 - Sep 13
+      { start: new Date(2025, 8, 14), end: new Date(2025, 9, 11) }, // Sep 14 - Oct 11
+      { start: new Date(2025, 9, 12), end: new Date(2025, 10, 8) }, // Oct 12 - Nov 8
+      { start: new Date(2025, 10, 9), end: new Date(2025, 11, 6) }, // Nov 9 - Dec 6
+      { start: new Date(2025, 11, 7), end: new Date(2026, 0, 3) },  // Dec 7 - Jan 3, 2026
+    ]
+    manualPeriods.forEach((p, i) => {
+      periods.push({
+        periodNumber: i + 1,
+        startDate: p.start,
+        endDate: p.end,
+        year: 2025
+      })
+    })
+  } else {
+    // For other years, generate 13 periods of 28 days each
+    const yearStart = getYearStartDate(year)
+    for (let i = 0; i < 13; i++) {
+      const startDate = addDays(yearStart, i * 28)
+      const endDate = addDays(startDate, 27) // 28 days inclusive
+      periods.push({
+        periodNumber: i + 1,
+        startDate,
+        endDate,
+        year
+      })
+    }
+  }
+  return periods
+}
+
+function getCurrentPeriod(): FourWeekPeriod {
+  const today = new Date()
+  const year = today.getFullYear()
+  const periods = getFourWeekPeriods(year)
+
+  // Find which period today falls into
+  for (const period of periods) {
+    if (today >= period.startDate && today <= period.endDate) {
+      return period
+    }
+  }
+
+  // If before first period of year, return last period of previous year
+  if (today < periods[0].startDate) {
+    const prevYearPeriods = getFourWeekPeriods(year - 1)
+    return prevYearPeriods[prevYearPeriods.length - 1]
+  }
+
+  // Default to last period
+  return periods[periods.length - 1]
+}
+
+interface MonthlyComparisonProps {
+  quarter?: string // Unused but kept for API compatibility
+  year?: number    // Unused but kept for API compatibility
   userHabits: HabitWithEntries[]
 }
 
@@ -61,19 +143,18 @@ function calculateMonthlyData(
   userId: string,
   displayName: string,
   habits: HabitWithEntries[],
-  monthStart: Date
+  period: FourWeekPeriod
 ): UserMonthlyData {
-  const monthEnd = endOfMonth(monthStart)
   const today = new Date()
-  const effectiveEnd = monthEnd > today ? today : monthEnd
+  const effectiveEnd = period.endDate > today ? today : period.endDate
 
-  // Only count days up to today if we're in the current month
-  const daysInMonth = eachDayOfInterval({
-    start: monthStart,
+  // Only count days up to today if we're in the current period
+  const daysInPeriod = eachDayOfInterval({
+    start: period.startDate,
     end: effectiveEnd
   })
 
-  const pastDays = daysInMonth.filter(d => d <= today)
+  const pastDays = daysInPeriod.filter(d => d <= today)
 
   // Calculate weekly breakdown
   const weeklyTrend: WeekData[] = []
@@ -92,7 +173,7 @@ function calculateMonthlyData(
     habit.entries.forEach(entry => {
       if (entry.status === 'done') {
         const entryDate = new Date(entry.date)
-        if (entryDate >= monthStart && entryDate <= effectiveEnd) {
+        if (entryDate >= period.startDate && entryDate <= effectiveEnd) {
           const weekNum = getWeek(entryDate, { weekStartsOn: 1 })
           const weekData = weeksInMonth.get(weekNum)
           if (weekData) {
@@ -125,7 +206,7 @@ function calculateMonthlyData(
     const doneCount = habit.entries.filter(entry => {
       if (entry.status !== 'done') return false
       const entryDate = new Date(entry.date)
-      return entryDate >= monthStart && entryDate <= effectiveEnd
+      return entryDate >= period.startDate && entryDate <= effectiveEnd
     }).length
 
     const totalDays = pastDays.length
@@ -157,11 +238,11 @@ function calculateMonthlyData(
   }
 }
 
-export default function MonthlyComparison({ quarter, year, userHabits }: MonthlyComparisonProps) {
+export default function MonthlyComparison({ userHabits }: MonthlyComparisonProps) {
   const { user, profile: userProfile } = useAuth()
   const [partners, setPartners] = useState<PartnerData[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
+  const [currentPeriod, setCurrentPeriod] = useState<FourWeekPeriod>(() => getCurrentPeriod())
   const [isCollapsed, setIsCollapsed] = useState(true)
 
   const supabase = useMemo(() => createClient(), [])
@@ -232,12 +313,37 @@ export default function MonthlyComparison({ quarter, year, userHabits }: Monthly
     }
   }, [userId, fetchPartners])
 
-  // Month navigation
-  const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
-  const goToNextMonth = () => setCurrentMonth(prev => addMonths(prev, 1))
-  const goToCurrentMonth = () => setCurrentMonth(startOfMonth(new Date()))
+  // Period navigation
+  const goToPreviousPeriod = () => {
+    const periods = getFourWeekPeriods(currentPeriod.year)
+    const currentIndex = periods.findIndex(p => p.periodNumber === currentPeriod.periodNumber)
+    if (currentIndex > 0) {
+      setCurrentPeriod(periods[currentIndex - 1])
+    } else {
+      // Go to previous year's last period
+      const prevYearPeriods = getFourWeekPeriods(currentPeriod.year - 1)
+      setCurrentPeriod(prevYearPeriods[prevYearPeriods.length - 1])
+    }
+  }
 
-  const isCurrentMonth = isSameMonth(currentMonth, new Date())
+  const goToNextPeriod = () => {
+    const periods = getFourWeekPeriods(currentPeriod.year)
+    const currentIndex = periods.findIndex(p => p.periodNumber === currentPeriod.periodNumber)
+    if (currentIndex < periods.length - 1) {
+      setCurrentPeriod(periods[currentIndex + 1])
+    } else {
+      // Go to next year's first period
+      const nextYearPeriods = getFourWeekPeriods(currentPeriod.year + 1)
+      setCurrentPeriod(nextYearPeriods[0])
+    }
+  }
+
+  const goToCurrentPeriod = () => setCurrentPeriod(getCurrentPeriod())
+
+  const isCurrentPeriod = useMemo(() => {
+    const current = getCurrentPeriod()
+    return currentPeriod.year === current.year && currentPeriod.periodNumber === current.periodNumber
+  }, [currentPeriod])
 
   // Calculate monthly data
   const myMonthlyData = useMemo(() =>
@@ -245,9 +351,9 @@ export default function MonthlyComparison({ quarter, year, userHabits }: Monthly
       userId || '',
       userProfile?.display_name || user?.email?.split('@')[0] || 'You',
       userHabits,
-      currentMonth
+      currentPeriod
     ),
-    [userId, userProfile, user, userHabits, currentMonth]
+    [userId, userProfile, user, userHabits, currentPeriod]
   )
 
   const partnersMonthlyData = useMemo(() =>
@@ -256,10 +362,10 @@ export default function MonthlyComparison({ quarter, year, userHabits }: Monthly
         partner.profile.id,
         partner.profile.display_name || partner.profile.email.split('@')[0],
         partner.habits,
-        currentMonth
+        currentPeriod
       )
     ),
-    [partners, currentMonth]
+    [partners, currentPeriod]
   )
 
   // Combine and sort for leaderboard
@@ -296,33 +402,36 @@ export default function MonthlyComparison({ quarter, year, userHabits }: Monthly
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Month Navigation */}
+            {/* Period Navigation */}
             <div className="flex items-center justify-between">
               <button
-                onClick={goToPreviousMonth}
+                onClick={goToPreviousPeriod}
                 className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
               >
                 <ChevronLeft size={16} className="text-[var(--muted)]" />
               </button>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-center gap-0.5">
                 <span className="text-sm font-medium text-[var(--foreground)]">
-                  {format(currentMonth, 'MMMM yyyy')}
+                  Month {currentPeriod.periodNumber}
                 </span>
-                {!isCurrentMonth && (
+                <span className="text-[10px] text-[var(--muted)]">
+                  {format(currentPeriod.startDate, 'MMM d')} - {format(currentPeriod.endDate, 'MMM d, yyyy')}
+                </span>
+                {!isCurrentPeriod && (
                   <button
-                    onClick={goToCurrentMonth}
-                    className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent-bg)] text-[var(--accent-text)] hover:bg-[var(--accent-bg-hover)]"
+                    onClick={goToCurrentPeriod}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent-bg)] text-[var(--accent-text)] hover:bg-[var(--accent-bg-hover)] mt-1"
                   >
-                    This Month
+                    Current Period
                   </button>
                 )}
               </div>
               <button
-                onClick={goToNextMonth}
+                onClick={goToNextPeriod}
                 className="p-1.5 rounded-lg hover:bg-[var(--card-bg)] transition-colors"
-                disabled={isCurrentMonth}
+                disabled={isCurrentPeriod}
               >
-                <ChevronRight size={16} className={isCurrentMonth ? 'text-[var(--muted-light)]' : 'text-[var(--muted)]'} />
+                <ChevronRight size={16} className={isCurrentPeriod ? 'text-[var(--muted-light)]' : 'text-[var(--muted)]'} />
               </button>
             </div>
 
