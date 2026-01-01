@@ -21,6 +21,7 @@ import {
 interface MonthlyComparisonProps {
   quarter: string
   year: number
+  userHabits: HabitWithEntries[]
 }
 
 interface PartnerData {
@@ -156,7 +157,7 @@ function calculateMonthlyData(
   }
 }
 
-export default function MonthlyComparison({ quarter, year }: MonthlyComparisonProps) {
+export default function MonthlyComparison({ quarter, year, userHabits }: MonthlyComparisonProps) {
   const { user, profile: userProfile } = useAuth()
   const [partners, setPartners] = useState<PartnerData[]>([])
   const [loading, setLoading] = useState(true)
@@ -165,32 +166,6 @@ export default function MonthlyComparison({ quarter, year }: MonthlyComparisonPr
 
   const supabase = useMemo(() => createClient(), [])
   const userId = user?.id
-
-  const [myHabits, setMyHabits] = useState<HabitWithEntries[]>([])
-
-  const fetchMyHabits = useCallback(async () => {
-    if (!userId) {
-      setMyHabits([])
-      return
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('habits')
-        .select('*, entries:habit_entries(*)')
-        .eq('user_id', userId)
-        .eq('archived', false)
-        .order('created_at', { ascending: true })
-
-      if (error) {
-        setMyHabits([])
-      } else {
-        setMyHabits(data as HabitWithEntries[] || [])
-      }
-    } catch {
-      setMyHabits([])
-    }
-  }, [userId, supabase])
 
   const fetchPartners = useCallback(async () => {
     if (!userId) {
@@ -251,13 +226,11 @@ export default function MonthlyComparison({ quarter, year }: MonthlyComparisonPr
   useEffect(() => {
     if (userId) {
       fetchPartners()
-      fetchMyHabits()
     } else {
       setPartners([])
-      setMyHabits([])
       setLoading(false)
     }
-  }, [userId, fetchPartners, fetchMyHabits])
+  }, [userId, fetchPartners])
 
   // Month navigation
   const goToPreviousMonth = () => setCurrentMonth(prev => subMonths(prev, 1))
@@ -271,10 +244,10 @@ export default function MonthlyComparison({ quarter, year }: MonthlyComparisonPr
     calculateMonthlyData(
       userId || '',
       userProfile?.display_name || user?.email?.split('@')[0] || 'You',
-      myHabits,
+      userHabits,
       currentMonth
     ),
-    [userId, userProfile, user, myHabits, currentMonth]
+    [userId, userProfile, user, userHabits, currentMonth]
   )
 
   const partnersMonthlyData = useMemo(() =>

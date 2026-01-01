@@ -782,9 +782,9 @@ export default function HabitTracker() {
         )}
 
         {/* Partner Section */}
-        {user && <PartnerSection quarter={quarter} year={year} />}
-        {user && <MonthlyComparison quarter={quarter} year={year} />}
-        {user && <QuarterlyComparison quarter={quarter} year={year} />}
+        {user && <PartnerSection quarter={quarter} year={year} userHabits={habits} />}
+        {user && <MonthlyComparison quarter={quarter} year={year} userHabits={habits} />}
+        {user && <QuarterlyComparison quarter={quarter} year={year} userHabits={habits} />}
         </main>
       </div>
 

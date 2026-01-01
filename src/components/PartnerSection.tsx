@@ -11,6 +11,7 @@ import { getWeekDays, calculateUserWeeklyData, UserWeeklyData, DayColumnData } f
 interface PartnerSectionProps {
   quarter: Quarter
   year: number
+  userHabits: HabitWithEntries[]
 }
 
 interface PartnerData {
@@ -19,7 +20,7 @@ interface PartnerData {
   habits: HabitWithEntries[]
 }
 
-export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
+export default function PartnerSection({ quarter, year, userHabits }: PartnerSectionProps) {
   const { user, profile: userProfile } = useAuth()
   const [partners, setPartners] = useState<PartnerData[]>([])
   const [allUsers, setAllUsers] = useState<Profile[]>([])
@@ -34,34 +35,6 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
 
   const supabase = useMemo(() => createClient(), [])
   const userId = user?.id
-
-  const [myHabits, setMyHabits] = useState<HabitWithEntries[]>([])
-
-  const fetchMyHabits = useCallback(async () => {
-    if (!userId) {
-      setMyHabits([])
-      return
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('habits')
-        .select('*, entries:habit_entries(*)')
-        .eq('user_id', userId)
-        .eq('archived', false)
-        .order('created_at', { ascending: true })
-
-      if (error) {
-        console.error('Error fetching my habits:', error)
-        setMyHabits([])
-      } else {
-        setMyHabits(data as HabitWithEntries[] || [])
-      }
-    } catch (err) {
-      console.error('Error fetching my habits:', err)
-      setMyHabits([])
-    }
-  }, [userId, supabase])
 
   const fetchPartners = useCallback(async () => {
     if (!userId) {
@@ -170,14 +143,12 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
     if (userId) {
       fetchPartners()
       fetchAllUsers()
-      fetchMyHabits()
     } else {
       setPartners([])
       setAllUsers([])
-      setMyHabits([])
       setLoading(false)
     }
-  }, [userId, quarter, year, fetchPartners, fetchAllUsers, fetchMyHabits])
+  }, [userId, quarter, year, fetchPartners, fetchAllUsers])
 
   const handleAddFriend = async (partnerId: string) => {
     if (!userId) return
@@ -245,10 +216,10 @@ export default function PartnerSection({ quarter, year }: PartnerSectionProps) {
       userId || '',
       userProfile?.display_name || user?.email?.split('@')[0] || 'You',
       user?.email || '',
-      myHabits,
+      userHabits,
       weekDays
     ),
-    [userId, userProfile, user, myHabits, weekDays]
+    [userId, userProfile, user, userHabits, weekDays]
   )
 
   const partnersWeeklyData = useMemo(() =>

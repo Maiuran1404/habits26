@@ -16,6 +16,7 @@ import {
 interface QuarterlyComparisonProps {
   quarter: Quarter
   year: number
+  userHabits: HabitWithEntries[]
 }
 
 interface PartnerData {
@@ -158,7 +159,7 @@ function calculateQuarterlyData(
 
 const quarterOptions: Quarter[] = ['Q1', 'Q2', 'Q3', 'Q4']
 
-export default function QuarterlyComparison({ quarter: initialQuarter, year: initialYear }: QuarterlyComparisonProps) {
+export default function QuarterlyComparison({ quarter: initialQuarter, year: initialYear, userHabits }: QuarterlyComparisonProps) {
   const { user, profile: userProfile } = useAuth()
   const [partners, setPartners] = useState<PartnerData[]>([])
   const [loading, setLoading] = useState(true)
@@ -168,32 +169,6 @@ export default function QuarterlyComparison({ quarter: initialQuarter, year: ini
 
   const supabase = useMemo(() => createClient(), [])
   const userId = user?.id
-
-  const [myHabits, setMyHabits] = useState<HabitWithEntries[]>([])
-
-  const fetchMyHabits = useCallback(async () => {
-    if (!userId) {
-      setMyHabits([])
-      return
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('habits')
-        .select('*, entries:habit_entries(*)')
-        .eq('user_id', userId)
-        .eq('archived', false)
-        .order('created_at', { ascending: true })
-
-      if (error) {
-        setMyHabits([])
-      } else {
-        setMyHabits(data as HabitWithEntries[] || [])
-      }
-    } catch {
-      setMyHabits([])
-    }
-  }, [userId, supabase])
 
   const fetchPartners = useCallback(async () => {
     if (!userId) {
@@ -254,13 +229,11 @@ export default function QuarterlyComparison({ quarter: initialQuarter, year: ini
   useEffect(() => {
     if (userId) {
       fetchPartners()
-      fetchMyHabits()
     } else {
       setPartners([])
-      setMyHabits([])
       setLoading(false)
     }
-  }, [userId, fetchPartners, fetchMyHabits])
+  }, [userId, fetchPartners])
 
   // Quarter navigation
   const goToPreviousQuarter = () => {
@@ -315,11 +288,11 @@ export default function QuarterlyComparison({ quarter: initialQuarter, year: ini
     calculateQuarterlyData(
       userId || '',
       userProfile?.display_name || user?.email?.split('@')[0] || 'You',
-      myHabits,
+      userHabits,
       currentQuarter,
       currentYear
     ),
-    [userId, userProfile, user, myHabits, currentQuarter, currentYear]
+    [userId, userProfile, user, userHabits, currentQuarter, currentYear]
   )
 
   const partnersQuarterlyData = useMemo(() =>
