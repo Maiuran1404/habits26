@@ -18,8 +18,6 @@ const ProfileModal = dynamic(() => import('./ProfileModal'), { ssr: false })
 const PartnerSection = dynamic(() => import('./PartnerSection'), { ssr: false })
 const MonthlyComparison = dynamic(() => import('./MonthlyComparison'), { ssr: false })
 const QuarterlyComparison = dynamic(() => import('./QuarterlyComparison'), { ssr: false })
-const SuccessGif = dynamic(() => import('./SuccessGif'), { ssr: false })
-
 export default function HabitTracker() {
   const { user, profile, loading: authLoading, setShowAuthModal, signOut } = useAuth()
   const [habits, setHabits] = useState<HabitWithEntries[]>([])
@@ -30,7 +28,6 @@ export default function HabitTracker() {
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const [showSuccessGif, setShowSuccessGif] = useState(false)
 
   // Mantra state
   const [mantra, setMantra] = useState('')
@@ -183,11 +180,6 @@ export default function HabitTracker() {
         h.id === habitId ? { ...h, entries: updateEntries(h.entries) } : h
       )
     )
-
-    // Show success GIF when marking a habit as done (new entry)
-    if (!existingEntry) {
-      setShowSuccessGif(true)
-    }
 
     // Server update
     let error = null
@@ -810,12 +802,6 @@ export default function HabitTracker() {
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
-      />
-
-      {/* Success GIF overlay */}
-      <SuccessGif
-        show={showSuccessGif}
-        onComplete={() => setShowSuccessGif(false)}
       />
     </div>
   )
