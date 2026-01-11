@@ -530,28 +530,31 @@ function UserComparisonCard({
       {/* Habits Header Row - Names and Stats */}
       <div className="overflow-x-auto -mx-2 px-2">
         <div className="min-w-fit">
-          {/* Habit Names Row */}
-          <div className="flex gap-3 mb-1">
-            <div className="w-8 flex-shrink-0" /> {/* Spacer for day labels */}
+          {/* Habit Names Row - Two-line wrapping for full visibility */}
+          <div className="flex gap-2 mb-1 items-end">
+            <div className="w-6 flex-shrink-0" /> {/* Spacer for day labels */}
             {userData.habits.map((habitData) => (
-              <div key={habitData.habit.id} className="w-12 flex-shrink-0 text-center">
-                <span className="text-[9px] font-medium text-[var(--foreground)] truncate block" title={habitData.habit.name}>
-                  {habitData.habit.name.length > 8 ? habitData.habit.name.slice(0, 7) + '…' : habitData.habit.name}
+              <div key={habitData.habit.id} className="w-14 flex-shrink-0 text-center h-8 flex items-end justify-center">
+                <span
+                  className="text-[9px] font-medium text-[var(--foreground)] leading-tight line-clamp-2"
+                  title={habitData.habit.name}
+                >
+                  {habitData.habit.name}
                 </span>
               </div>
             ))}
           </div>
 
           {/* Habit Stats Row */}
-          <div className="flex gap-3 mb-2">
-            <div className="w-8 flex-shrink-0" /> {/* Spacer for day labels */}
+          <div className="flex gap-2 mb-2">
+            <div className="w-6 flex-shrink-0" /> {/* Spacer for day labels */}
             {userData.habits.map((habitData) => {
               const doneCount = habitData.weeklyDoneCount
               const targetDays = weekDays.filter(d => !d.isFuture).length
               const percentage = targetDays > 0 ? Math.round((doneCount / targetDays) * 100) : 0
 
               return (
-                <div key={habitData.habit.id} className="w-12 flex-shrink-0 text-center">
+                <div key={habitData.habit.id} className="w-14 flex-shrink-0 text-center">
                   <span className="text-[10px] font-semibold text-[var(--foreground)] block">
                     {doneCount}/{targetDays}
                   </span>
@@ -570,9 +573,9 @@ function UserComparisonCard({
           {/* Days Grid - Day label on left, dots for each habit */}
           <div className="space-y-1">
             {weekDays.map((day) => (
-              <div key={day.dateStr} className="flex gap-3 items-center">
+              <div key={day.dateStr} className="flex gap-2 items-center">
                 {/* Day Label */}
-                <div className={`w-8 flex-shrink-0 text-[10px] font-medium ${
+                <div className={`w-6 flex-shrink-0 text-[10px] font-medium ${
                   day.isToday ? 'text-[var(--accent-text)] font-bold' : 'text-[var(--muted)]'
                 }`}>
                   {format(day.date, 'EEE')[0]}
@@ -594,7 +597,7 @@ function UserComparisonCard({
                   }
 
                   return (
-                    <div key={habitData.habit.id} className="w-12 flex-shrink-0 flex justify-center">
+                    <div key={habitData.habit.id} className="w-14 flex-shrink-0 flex justify-center">
                       <div
                         className={`w-4 h-4 rounded-full ${dotColor} ${day.isToday ? 'ring-2 ring-offset-1 ring-[var(--accent-500)]' : ''}`}
                         title={`${format(day.date, 'EEE')}: ${entry?.status || (day.isFuture ? 'upcoming' : 'not tracked')}`}
